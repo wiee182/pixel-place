@@ -11,7 +11,7 @@ const gridSize = 10;
 let currentColor = "#fffefe";
 let showGrid = true;
 
-// Transform & inertia
+// Transform
 let scale = 1, targetScale = 1;
 let offsetX = 0, offsetY = 0;
 let targetOffsetX = 0, targetOffsetY = 0;
@@ -56,8 +56,8 @@ function drawGrid() {
     }
   });
 
-  // Draw grid only on pixel canvas
-  if(showGrid) {
+  // Draw grid
+  if(showGrid){
     ctx.strokeStyle = "#222";
     ctx.lineWidth = 1/scale;
     for(let x=Math.floor(viewLeft/gridSize)*gridSize; x<=viewRight; x+=gridSize){
@@ -67,7 +67,6 @@ function drawGrid() {
       ctx.beginPath(); ctx.moveTo(viewLeft, y); ctx.lineTo(viewRight, y); ctx.stroke();
     }
   }
-
   ctx.restore();
 }
 
@@ -168,24 +167,27 @@ gridBtn.addEventListener("click",()=>{
   showGrid=!showGrid;
   if(showGrid){ gridBtn.style.background="#fff"; gridBtn.style.color="#000"; }
   else{ gridBtn.style.background="#222"; gridBtn.style.color="#fff"; }
-  drawGrid();
 });
 
 // ====== Chat ======
+const chatPopup = document.getElementById("chat-popup");
+const chatToggleBtn = document.getElementById("toggle-chat");
+const closeChatBtn = document.getElementById("close-chat");
+
+chatToggleBtn.addEventListener("click", () => { chatPopup.classList.toggle("hidden"); });
+closeChatBtn.addEventListener("click", () => { chatPopup.classList.add("hidden"); });
+
 const feed=document.getElementById("chat-feed");
 const input=document.getElementById("chat-message");
 const sendBtn=document.getElementById("send-message");
-const sidePanel=document.getElementById("side-panel");
-const chatToggleBtn=document.getElementById("toggle-chat");
 
-function sendMessage(){ const text=input.value.trim(); if(!text) return; const msg=document.createElement("div"); msg.className="chat-msg"; msg.textContent=text; feed.insertBefore(msg,feed.querySelector(".chat-input")); input.value=""; feed.scrollTop=feed.scrollHeight; }
-sendBtn.addEventListener("click",sendMessage);
-input.addEventListener("keydown",e=>{ if(e.key==="Enter"){ sendMessage(); e.preventDefault(); } });
-
-chatToggleBtn.addEventListener("click",()=>{
-  if(sidePanel.style.display==="none" || sidePanel.style.display===""){
-    sidePanel.style.display="flex"; chatToggleBtn.textContent="Hide Chat";
-  } else {
-    sidePanel.style.display="none"; chatToggleBtn.textContent="Show Chat";
-  }
-});
+function sendMessage() {
+  const text=input.value.trim();
+  if(!text) return;
+  const msg=document.createElement("div"); msg.className="chat-msg"; msg.textContent=text;
+  feed.appendChild(msg);
+  input.value="";
+  feed.scrollTop=feed.scrollHeight;
+}
+sendBtn.addEventListener("click", sendMessage);
+input.addEventListener("keydown", e=>{ if(e.key==="Enter"){ sendMessage(); e.preventDefault(); } });
