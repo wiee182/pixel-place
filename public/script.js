@@ -10,16 +10,15 @@ const bgCtx = bgCanvas.getContext("2d");
 const canvas = document.getElementById("pixelCanvas");
 const ctx = canvas.getContext("2d");
 
-let scale=1,targetScale=1;
-let offsetX=0,offsetY=0;
-let isDragging=false;
-let dragStartX=0, dragStartY=0;
+let scale = 1, offsetX = 0, offsetY = 0;
+let isDragging = false, dragStartX = 0, dragStartY = 0;
+let pinchStartDist = null, pinchStartScale = 1;
 
-let currentColor="#fffefe";
-let showGrid=true;
+let currentColor = "#fffefe";
+let showGrid = true;
 const chunks = new Map();
 
-// ===== Palette =====
+// ===== Palette & Points =====
 const colors = [
   "#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100","#382314","#7c3f20",
   "#c16f36","#feac6d","#ffd3b0","#fea5d0","#f04eb4","#e872ff","#a631d3","#531c8d",
@@ -28,7 +27,6 @@ const colors = [
   "#f20e0c","#ff7872"
 ];
 
-// ===== DOM Elements =====
 const paletteDiv = document.getElementById("palette");
 const toggleGridBtn = document.getElementById("toggle-grid");
 const chatPopup = document.getElementById("chat-popup");
@@ -36,10 +34,16 @@ const chatFeed = document.getElementById("chat-feed");
 const chatInput = document.getElementById("chat-message");
 const sendBtn = document.getElementById("send-message");
 const pointsDisplay = document.getElementById("points-display");
+const toggleSoundBtn = document.getElementById("toggle-sound");
 
-// ===== User Points =====
 let userPoints = 6;
 let lastActionTime = Date.now();
+let soundEnabled = true;
+
+// ===== Audio =====
+const drawAudio = new Audio('sounds/draw.mp3'); drawAudio.volume = 0.2;
+const pointAudio = new Audio('sounds/point.mp3'); pointAudio.volume = 0.3;
+function playSound(audio){ if(!soundEnabled) return; const s = audio.cloneNode(); s.play(); }
 
 // ===== WebSocket =====
 const wsProtocol = location.protocol==="https:"?"wss":"ws";
@@ -48,10 +52,9 @@ ws.addEventListener("message", e=>{
   const data = JSON.parse(e.data);
   if(data.type==="draw") handleIncomingPixel(data);
   if(data.type==="chat") appendChat(data.message);
-  if(data.type==="init") data.chat.forEach(msg=>appendChat(msg.message));
 });
 
-// ===== Canvas Resize =====
+// ===== Resize =====
 function resizeCanvas(){
   canvas.width = bgCanvas.width = canvas.parentElement.clientWidth;
   canvas.height = bgCanvas.height = canvas.parentElement.clientHeight;
@@ -73,7 +76,6 @@ function drawGrid(){
   const viewRight = viewLeft + canvas.width/scale;
   const viewBottom = viewTop + canvas.height/scale;
 
-  // Draw pixels
   const startChunkX = Math.floor(viewLeft/CHUNK_SIZE);
   const startChunkY = Math.floor(viewTop/CHUNK_SIZE);
   const endChunkX = Math.floor(viewRight/CHUNK_SIZE);
@@ -91,14 +93,13 @@ function drawGrid(){
     }
   }
 
-  // Draw grid
   if(showGrid){
     ctx.strokeStyle="#222";
     ctx.lineWidth=1/scale;
-    for(let x=Math.floor(viewLeft/GRID_SIZE)*GRID_SIZE; x<=viewRight; x+=GRID_SIZE){
+    for(let x=Math.floor(viewLeft/GRID_SIZE)*GRID_SIZE;x<=viewRight;x+=GRID_SIZE){
       ctx.beginPath(); ctx.moveTo(x,viewTop); ctx.lineTo(x,viewBottom); ctx.stroke();
     }
-    for(let y=Math.floor(viewTop/GRID_SIZE)*GRID_SIZE; y<=viewBottom; y+=GRID_SIZE){
+    for(let y=Math.floor(viewTop/GRID_SIZE)*GRID_SIZE;y<=viewBottom;y+=GRID_SIZE){
       ctx.beginPath(); ctx.moveTo(viewLeft,y); ctx.lineTo(viewRight,y); ctx.stroke();
     }
   }
@@ -106,7 +107,7 @@ function drawGrid(){
   ctx.restore();
 }
 
-// ===== Handle Incoming Pixel =====
+// ===== Incoming Pixel =====
 function handleIncomingPixel(p){
   const chunkX = Math.floor(p.x/CHUNK_SIZE);
   const chunkY = Math.floor(p.y/CHUNK_SIZE);
@@ -115,7 +116,15 @@ function handleIncomingPixel(p){
   const chunk = chunks.get(key);
   const idx = chunk.findIndex(px=>px.x===p.x && px.y===p.y);
   if(idx>=0) chunk[idx]=p; else chunk.push(p);
-  drawGrid();
+
+  // Pixel pop animation
+  ctx.save();
+  ctx.translate(offsetX, offsetY);
+  ctx.scale(scale, scale);
+  ctx.fillStyle=p.color;
+  ctx.fillRect(p.x,p.y,GRID_SIZE,GRID_SIZE);
+  ctx.restore();
+  playSound(drawAudio);
 }
 
 // ===== Palette =====
@@ -142,32 +151,66 @@ toggleGridBtn.addEventListener("click",()=>{
   drawGrid();
 });
 
-// ===== Zoom with cursor-centered fix =====
+// ===== Zoom & Pan =====
+function zoomAt(cx,cy,zoomFactor){
+  const newScale = Math.min(Math.max(0.1, scale*zoomFactor),5);
+  offsetX -= (cx*(newScale-scale));
+  offsetY -= (cy*(newScale-scale));
+  scale = newScale;
+}
 canvas.addEventListener("wheel", e=>{
   e.preventDefault();
   const rect = canvas.getBoundingClientRect();
-  const mouseX = (e.clientX - rect.left - offsetX)/scale;
-  const mouseY = (e.clientY - rect.top - offsetY)/scale;
-  const zoom = e.deltaY<0?1.1:0.9;
-  const newScale = Math.min(Math.max(0.1, scale*zoom),5);
-  offsetX -= (mouseX*(newScale-scale));
-  offsetY -= (mouseY*(newScale-scale));
-  scale = newScale;
+  const mx = (e.clientX-rect.left-offsetX)/scale;
+  const my = (e.clientY-rect.top-offsetY)/scale;
+  zoomAt(mx,my,e.deltaY<0?1.1:0.9);
   drawGrid();
 });
 
-// ===== Pan =====
+// Pan
 canvas.addEventListener("mousedown", e=>{isDragging=true; dragStartX=e.clientX-offsetX; dragStartY=e.clientY-offsetY;});
 canvas.addEventListener("mousemove", e=>{if(isDragging){offsetX=e.clientX-dragStartX; offsetY=e.clientY-dragStartY; drawGrid();}});
 canvas.addEventListener("mouseup", ()=>{isDragging=false;});
 canvas.addEventListener("mouseleave", ()=>{isDragging=false;});
+
+// ===== Touch Pan & Pinch =====
+canvas.addEventListener("touchstart", e=>{
+  if(e.touches.length===1){ isDragging=true; dragStartX=e.touches[0].clientX-offsetX; dragStartY=e.touches[0].clientY-offsetY; }
+  if(e.touches.length===2){
+    isDragging=false;
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    pinchStartDist=Math.hypot(dx,dy);
+    pinchStartScale=scale;
+  }
+});
+canvas.addEventListener("touchmove", e=>{
+  e.preventDefault();
+  if(e.touches.length===1 && isDragging){
+    offsetX=e.touches[0].clientX-dragStartX;
+    offsetY=e.touches[0].clientY-dragStartY;
+    drawGrid();
+  }
+  if(e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    const dist=Math.hypot(dx,dy);
+    const zoom=dist/pinchStartDist;
+    const rect = canvas.getBoundingClientRect();
+    const centerX = ((e.touches[0].clientX+e.touches[1].clientX)/2-rect.left-offsetX)/scale;
+    const centerY = ((e.touches[0].clientY+e.touches[1].clientY)/2-rect.top-offsetY)/scale;
+    zoomAt(centerX, centerY, zoom*pinchStartScale/scale);
+    drawGrid();
+  }
+});
+canvas.addEventListener("touchend", e=>{if(e.touches.length===0) isDragging=false; pinchStartDist=null;});
 
 // ===== Draw Pixel & Points =====
 canvas.addEventListener("click", e=>{
   if(isDragging) return;
   const now = Date.now();
   if(userPoints<=0 && now-lastActionTime<30000) return;
-  if(userPoints<=0 && now-lastActionTime>=30000){ userPoints=1; lastActionTime=now; }
+  if(userPoints<=0 && now-lastActionTime>=30000){ userPoints=1; lastActionTime=now; playSound(pointAudio); }
 
   const rect = canvas.getBoundingClientRect();
   const worldX = (e.clientX-rect.left-offsetX)/scale;
@@ -185,10 +228,8 @@ canvas.addEventListener("click", e=>{
 // ===== Floating Chat =====
 function appendChat(message){
   const msg = document.createElement("div");
-  msg.className="chat-msg";
-  msg.textContent = message;
-  chatFeed.appendChild(msg);
-  chatFeed.scrollTop = chatFeed.scrollHeight;
+  msg.className="chat-msg"; msg.textContent=message;
+  chatFeed.appendChild(msg); chatFeed.scrollTop=chatFeed.scrollHeight;
 }
 sendBtn.addEventListener("click", sendMessage);
 chatInput.addEventListener("keydown", e=>{if(e.key==="Enter"){sendMessage(); e.preventDefault();}});
@@ -203,23 +244,19 @@ function sendMessage(){
 document.getElementById("toggle-chat").addEventListener("click",()=>{chatPopup.classList.toggle("hidden");});
 document.getElementById("close-chat").addEventListener("click",()=>{chatPopup.classList.add("hidden");});
 
+// ===== Toggle Sound =====
+toggleSoundBtn.addEventListener("click",()=>{soundEnabled=!soundEnabled; toggleSoundBtn.textContent=soundEnabled?"🔊":"🔇";});
+
 // ===== Points Display =====
 function updatePointsDisplay(){
-  if(userPoints>0){ pointsDisplay.style.color="#0f0"; pointsDisplay.textContent = `${userPoints}/6`; }
-  else{ 
-    const now = Date.now(); 
-    const timeLeft = Math.max(0, Math.ceil((30000-(now-lastActionTime))/1000)); 
-    pointsDisplay.style.color="#f00"; 
-    pointsDisplay.textContent = `0/6 ${timeLeft}s`;
-  }
+  if(userPoints>0){ pointsDisplay.style.color="#0f0"; pointsDisplay.textContent=`${userPoints}/6`; }
+  else{ const now=Date.now(); const timeLeft=Math.max(0,Math.ceil((30000-(now-lastActionTime))/1000)); pointsDisplay.style.color="#f00"; pointsDisplay.textContent=`0/6 ${timeLeft}s`; }
 }
 setInterval(updatePointsDisplay,1000);
-
-// ===== Restore Points =====
 setInterval(()=>{
-  if(userPoints<6){ userPoints++; updatePointsDisplay(); }
+  if(userPoints<6){ userPoints++; playSound(pointAudio); updatePointsDisplay(); }
 },30000);
 
-// ===== Animation =====
+// ===== Animate =====
 function animate(){ drawGrid(); requestAnimationFrame(animate); }
 animate();
