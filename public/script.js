@@ -1,4 +1,4 @@
-// ====== script.js (full, fixed zoom & pan) ======
+// ====== script.js (rewritten full version with Grid toggle) ======
 const canvas = document.getElementById("pixelCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -7,8 +7,9 @@ const WORLD_WIDTH = 10000;
 const WORLD_HEIGHT = 10000;
 const gridSize = 10;
 let currentColor = "#ff0000";
+let showGrid = true; // Grid visible by default
 
-// Transform + inertia
+// Transform & inertia
 let scale = 1, targetScale = 1;
 let offsetX = 0, offsetY = 0;
 let targetOffsetX = 0, targetOffsetY = 0;
@@ -27,14 +28,12 @@ const pixels = [];
 function resizeCanvas() {
   canvas.width = canvas.parentElement.clientWidth;
   canvas.height = canvas.parentElement.clientHeight;
-
-  // When resizing, recenter if world smaller than viewport
   recalcOffsetLimits();
 }
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
-// ====== Drawing ======
+// ====== Draw Grid & Pixels ======
 function drawGrid() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
@@ -45,7 +44,7 @@ function drawGrid() {
   ctx.fillStyle = "#111";
   ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
-  // Viewport boundaries for optimization
+  // Viewport boundaries
   const viewLeft = -offsetX / scale;
   const viewTop = -offsetY / scale;
   const viewRight = viewLeft + canvas.width / scale;
@@ -60,37 +59,41 @@ function drawGrid() {
     }
   });
 
-  // Draw grid lines in viewport
-  ctx.strokeStyle = "#222";
-  ctx.lineWidth = 1 / scale;
-  const startX = Math.floor(viewLeft / gridSize) * gridSize;
-  const endX = Math.ceil(viewRight / gridSize) * gridSize;
-  for (let x = startX; x <= endX; x += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(x, viewTop);
-    ctx.lineTo(x, viewBottom);
-    ctx.stroke();
-  }
-  const startY = Math.floor(viewTop / gridSize) * gridSize;
-  const endY = Math.ceil(viewBottom / gridSize) * gridSize;
-  for (let y = startY; y <= endY; y += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(viewLeft, y);
-    ctx.lineTo(viewRight, y);
-    ctx.stroke();
+  // Draw grid if enabled
+  if (showGrid) {
+    ctx.strokeStyle = "#222";
+    ctx.lineWidth = 1 / scale;
+
+    const startX = Math.floor(viewLeft / gridSize) * gridSize;
+    const endX = Math.ceil(viewRight / gridSize) * gridSize;
+    for (let x = startX; x <= endX; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, viewTop);
+      ctx.lineTo(x, viewBottom);
+      ctx.stroke();
+    }
+
+    const startY = Math.floor(viewTop / gridSize) * gridSize;
+    const endY = Math.ceil(viewBottom / gridSize) * gridSize;
+    for (let y = startY; y <= endY; y += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(viewLeft, y);
+      ctx.lineTo(viewRight, y);
+      ctx.stroke();
+    }
   }
 
   ctx.restore();
 }
 
-// ====== Calculate dynamic zoom limits ======
+// ====== Dynamic Zoom Limits ======
 function recalcZoomLimits() {
   const minScaleX = canvas.width / WORLD_WIDTH;
   const minScaleY = canvas.height / WORLD_HEIGHT;
   return { min: Math.min(minScaleX, minScaleY), max: 10 };
 }
 
-// ====== Animate smooth transform + inertia + dynamic clamp ======
+// ====== Animation Loop ======
 function animate() {
   scale += (targetScale - scale) * 0.15;
   offsetX += (targetOffsetX - offsetX) * 0.15 + velocityX;
@@ -100,18 +103,17 @@ function animate() {
   velocityY *= 0.88;
 
   recalcOffsetLimits();
-
   drawGrid();
   requestAnimationFrame(animate);
 }
 animate();
 
-// ====== Dynamic pan/clamp ======
+// ====== Dynamic Pan / Clamp ======
 function recalcOffsetLimits() {
   const scaledWidth = WORLD_WIDTH * scale;
   const scaledHeight = WORLD_HEIGHT * scale;
 
-  // Horizontal clamp / center
+  // Horizontal
   if (scaledWidth <= canvas.width) {
     offsetX = targetOffsetX = (canvas.width - scaledWidth) / 2;
   } else {
@@ -121,7 +123,7 @@ function recalcOffsetLimits() {
     targetOffsetX = Math.max(minX, Math.min(maxX, targetOffsetX));
   }
 
-  // Vertical clamp / center
+  // Vertical
   if (scaledHeight <= canvas.height) {
     offsetY = targetOffsetY = (canvas.height - scaledHeight) / 2;
   } else {
@@ -144,11 +146,10 @@ function snapToGrid(val) {
   return Math.floor(val / gridSize) * gridSize;
 }
 
-// ====== Zoom (centered on mouse, dynamic limits) ======
+// ====== Zoom ======
 canvas.addEventListener("wheel", e => {
   e.preventDefault();
   const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-
   const { min, max } = recalcZoomLimits();
 
   const rect = canvas.getBoundingClientRect();
@@ -162,7 +163,7 @@ canvas.addEventListener("wheel", e => {
   targetScale = Math.max(min, Math.min(max, targetScale));
 });
 
-// ====== Pan with drag + inertia ======
+// ====== Pan ======
 canvas.addEventListener("mousedown", e => {
   if (e.button !== 0) return;
   isDragging = true;
@@ -175,12 +176,7 @@ canvas.addEventListener("mousedown", e => {
 
 canvas.addEventListener("mousemove", e => {
   if (!isDragging) return;
-
-  if (!dragMoved) {
-    const dx = e.clientX - downX;
-    const dy = e.clientY - downY;
-    if (Math.hypot(dx, dy) > 4) dragMoved = true;
-  }
+  if (!dragMoved && Math.hypot(e.clientX - downX, e.clientY - downY) > 4) dragMoved = true;
 
   const newX = e.clientX - panStartX;
   const newY = e.clientY - panStartY;
@@ -194,7 +190,7 @@ function endPan() { isDragging = false; }
 canvas.addEventListener("mouseup", endPan);
 canvas.addEventListener("mouseleave", endPan);
 
-// ====== Place Pixel (only if not dragging) ======
+// ====== Place Pixel ======
 canvas.addEventListener("click", e => {
   if (dragMoved) return;
 
@@ -202,7 +198,6 @@ canvas.addEventListener("click", e => {
   let x = snapToGrid(worldX);
   let y = snapToGrid(worldY);
 
-  // Clamp to world
   x = Math.max(0, Math.min(WORLD_WIDTH - gridSize, x));
   y = Math.max(0, Math.min(WORLD_HEIGHT - gridSize, y));
 
@@ -229,6 +224,16 @@ colors.forEach(c => {
   palette.appendChild(swatch);
 });
 document.querySelector(".color-swatch").classList.add("selected");
+
+// ====== Grid Toggle Button ======
+const gridBtn = document.getElementById("toggle-grid");
+gridBtn.style.background = "#fff"; // White = ON
+
+gridBtn.addEventListener("click", () => {
+  showGrid = !showGrid;
+  gridBtn.style.background = showGrid ? "#fff" : "#222"; // White = ON, Dark = OFF
+  drawGrid();
+});
 
 // ====== Chat Feed ======
 const feed = document.getElementById("chat-feed");
