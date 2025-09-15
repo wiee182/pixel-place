@@ -1,26 +1,50 @@
-// ====== Canvas Setup ======
 const canvas = document.getElementById("pixelCanvas");
 const ctx = canvas.getContext("2d");
 
+// ===== Canvas Setup =====
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+window.addEventListener("resize", () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+// ===== View Transform State =====
 let scale = 1;
+let targetScale = 1;
 let offsetX = 0, offsetY = 0;
+let targetX = 0, targetY = 0;
+
 let isDragging = false;
-let startX, startY;
+let lastMouseX = 0, lastMouseY = 0;
 
+// Inertia
+let velocityX = 0, velocityY = 0;
+
+// Grid / Pixels
+const gridSize = 20;
 let currentColor = "#ff0000";
-const gridSize = 10;
+let pixels = [];
 
-// Draw grid
-function drawGrid() {
+// ===== Draw Loop =====
+function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Smooth transition
+  offsetX += (targetX - offsetX) * 0.2;
+  offsetY += (targetY - offsetY) * 0.2;
+  scale += (targetScale - scale) * 0.2;
+
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  ctx.fillStyle = "#fff";
+  // Background
+  ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.strokeStyle = "#ddd";
+  // Grid
+  ctx.strokeStyle = "#222";
   for (let x = 0; x < canvas.width; x += gridSize) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
@@ -34,85 +58,103 @@ function drawGrid() {
     ctx.stroke();
   }
 
+  // Draw Pixels
+  pixels.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, gridSize, gridSize);
+  });
+
   ctx.restore();
+
+  requestAnimationFrame(draw);
 }
+draw();
 
-drawGrid();
-
-// Zoom
+// ===== Smooth Zoom at Mouse Position =====
 canvas.addEventListener("wheel", (e) => {
   e.preventDefault();
-  const zoom = e.deltaY < 0 ? 1.1 : 0.9;
-  scale *= zoom;
-  drawGrid();
+
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  // Convert to world coords
+  const worldX = (mouseX - offsetX) / scale;
+  const worldY = (mouseY - offsetY) / scale;
+
+  const zoomFactor = e.deltaY < 0 ? 1.2 : 0.8;
+  targetScale *= zoomFactor;
+  targetScale = Math.min(Math.max(targetScale, 0.2), 10);
+
+  // Keep zoom anchored on mouse
+  targetX = mouseX - worldX * targetScale;
+  targetY = mouseY - worldY * targetScale;
 });
 
-// Pan
+// ===== Pan with Inertia =====
 canvas.addEventListener("mousedown", (e) => {
   isDragging = true;
-  startX = e.clientX - offsetX;
-  startY = e.clientY - offsetY;
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+  velocityX = velocityY = 0;
 });
+
 canvas.addEventListener("mousemove", (e) => {
   if (isDragging) {
-    offsetX = e.clientX - startX;
-    offsetY = e.clientY - startY;
-    drawGrid();
+    const dx = e.clientX - lastMouseX;
+    const dy = e.clientY - lastMouseY;
+
+    targetX += dx;
+    targetY += dy;
+
+    velocityX = dx;
+    velocityY = dy;
+
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
   }
 });
-canvas.addEventListener("mouseup", () => { isDragging = false; });
 
-// Place pixel
+canvas.addEventListener("mouseup", () => {
+  isDragging = false;
+});
+canvas.addEventListener("mouseleave", () => {
+  isDragging = false;
+});
+
+// ===== Apply inertia continuously =====
+function applyInertia() {
+  if (!isDragging) {
+    targetX += velocityX;
+    targetY += velocityY;
+
+    velocityX *= 0.9; // friction
+    velocityY *= 0.9;
+
+    if (Math.abs(velocityX) < 0.1) velocityX = 0;
+    if (Math.abs(velocityY) < 0.1) velocityY = 0;
+  }
+  requestAnimationFrame(applyInertia);
+}
+applyInertia();
+
+// ===== Place Pixel =====
 canvas.addEventListener("click", (e) => {
+  if (isDragging) return; // ignore if dragging
+
   const rect = canvas.getBoundingClientRect();
-  const x = Math.floor((e.clientX - rect.left - offsetX) / (gridSize * scale)) * gridSize;
-  const y = Math.floor((e.clientY - rect.top - offsetY) / (gridSize * scale)) * gridSize;
+  const worldX = (e.clientX - rect.left - offsetX) / scale;
+  const worldY = (e.clientY - rect.top - offsetY) / scale;
 
-  ctx.save();
-  ctx.translate(offsetX, offsetY);
-  ctx.scale(scale, scale);
-  ctx.fillStyle = currentColor;
-  ctx.fillRect(x, y, gridSize, gridSize);
-  ctx.restore();
+  const x = Math.floor(worldX / gridSize) * gridSize;
+  const y = Math.floor(worldY / gridSize) * gridSize;
+
+  pixels.push({ x, y, color: currentColor });
 });
 
-// ====== Palette ======
-const palette = document.getElementById("palette");
-const colors = ["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff", "#000000", "#ffffff"];
-colors.forEach(c => {
-  const swatch = document.createElement("div");
-  swatch.className = "color-swatch";
-  swatch.style.background = c;
-  swatch.dataset.color = c;
-  swatch.addEventListener("click", () => {
-    document.querySelectorAll(".color-swatch").forEach(s => s.classList.remove("selected"));
-    swatch.classList.add("selected");
-    currentColor = c;
-  });
-  palette.appendChild(swatch);
-});
-document.querySelector(".color-swatch").classList.add("selected");
-
-// ====== Chat Panel ======
-const sidePanel = document.getElementById("side-panel");
-document.getElementById("toggle-chat").addEventListener("click", () => {
-  sidePanel.classList.toggle("active");
-});
-document.getElementById("close-panel").addEventListener("click", () => {
-  sidePanel.classList.remove("active");
-});
-
-const feed = document.getElementById("chat-feed");
-const input = document.getElementById("chat-message");
-const sendBtn = document.getElementById("send-message");
-
-sendBtn.addEventListener("click", () => {
-  if (input.value.trim() !== "") {
-    const msg = document.createElement("div");
-    msg.className = "chat-msg";
-    msg.textContent = input.value;
-    feed.appendChild(msg);
-    input.value = "";
-    feed.scrollTop = feed.scrollHeight;
-  }
+// ===== Double-click to reset view =====
+canvas.addEventListener("dblclick", () => {
+  targetX = canvas.width / 2;
+  targetY = canvas.height / 2;
+  targetScale = 1;
 });
