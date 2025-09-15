@@ -1,13 +1,92 @@
-body {
-  background: #111;
-  color: #fff;
-  font-family: Arial, sans-serif;
-  text-align: center;
-  margin-top: 20px;
+/* General Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-canvas {
-  border: 2px solid white;
-  margin-top: 10px;
+body {
+  background: #111;
+  color: white;
+  font-family: Arial, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Canvas container */
+#canvas-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #222;
+}
+
+#pixelCanvas {
+  border: 2px solid #333;
+  image-rendering: pixelated;
   cursor: crosshair;
+}
+
+/* Bottom bar */
+#bottom-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1a1a1a;
+  padding: 8px 12px;
+  border-top: 2px solid #333;
+}
+
+/* Palette */
+#palette {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  max-width: 70%;
+}
+
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #555;
+  cursor: pointer;
+}
+
+.color-swatch.selected {
+  border: 2px solid white;
+}
+
+/* Toolbar buttons */
+#toolbar {
+  display: flex;
+  gap: 10px;
+}
+
+.tool-btn {
+  background: #333;
+  border: none;
+  padding: 6px 12px;
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.tool-btn:hover {
+  background: #555;
+}
+
+/* Side panel (right) */
+#side-panel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 50px;
+  width: 250px;
+  background: rgba(20, 20, 20, 0.9);
+  border-left: 2px solid #333;
+  padding: 10px;
+  overflow-y: auto;
 }

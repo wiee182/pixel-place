@@ -1,16 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pixel Canvas</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Pixel Canvas 🎨</h1>
-  <p>Click on the grid to place a pixel!</p>
-  <canvas id="canvas" width="500" height="500"></canvas>
+  <!-- Main canvas container -->
+  <div id="canvas-container">
+    <canvas id="pixelCanvas" width="1000" height="600"></canvas>
+  </div>
 
-  <!-- Socket.IO client -->
+  <!-- Bottom UI bar -->
+  <div id="bottom-bar">
+    <div id="palette">
+      <!-- Colors will be generated dynamically -->
+    </div>
+
+    <div id="toolbar">
+      <button class="tool-btn">Tweaks</button>
+      <button class="tool-btn">Volume</button>
+      <button class="tool-btn">Inspect</button>
+      <button class="tool-btn">Activity</button>
+    </div>
+  </div>
+
+  <!-- Side panel (chat / activity feed placeholder) -->
+  <div id="side-panel">
+    <h3>Activity Feed</h3>
+    <div id="feed"></div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
 </body>
