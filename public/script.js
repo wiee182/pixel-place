@@ -10,44 +10,73 @@ let startX, startY;
 let currentColor = "#ff0000";
 const gridSize = 10;
 
-// Draw grid
+// Store all placed pixels to prevent disappearing
+const pixels = [];
+
+// Resize canvas to fill container
+function resizeCanvas() {
+  canvas.width = canvas.parentElement.clientWidth;
+  canvas.height = canvas.parentElement.clientHeight;
+  drawGrid();
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+// Draw grid and pixels
 function drawGrid() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Draw background
+  ctx.fillStyle = "#111";
+  ctx.fillRect(0, 0, canvas.width / scale, canvas.height / scale);
 
-  ctx.strokeStyle = "#ddd";
-  for (let x = 0; x < canvas.width; x += gridSize) {
+  // Draw pixels
+  pixels.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, gridSize, gridSize);
+  });
+
+  // Draw grid
+  ctx.strokeStyle = "#222";
+  ctx.lineWidth = 1 / scale;
+  for (let x = 0; x < canvas.width / scale; x += gridSize) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvas.height);
+    ctx.lineTo(x, canvas.height / scale);
     ctx.stroke();
   }
-  for (let y = 0; y < canvas.height; y += gridSize) {
+  for (let y = 0; y < canvas.height / scale; y += gridSize) {
     ctx.beginPath();
     ctx.moveTo(0, y);
-    ctx.lineTo(canvas.width, y);
+    ctx.lineTo(canvas.width / scale, y);
     ctx.stroke();
   }
 
   ctx.restore();
 }
 
-drawGrid();
-
-// Zoom
+// ====== Zoom (centered on mouse) ======
 canvas.addEventListener("wheel", (e) => {
   e.preventDefault();
-  const zoom = e.deltaY < 0 ? 1.1 : 0.9;
-  scale *= zoom;
+  const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+
+  // Get mouse position relative to canvas
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  // Adjust offset so zoom centers on mouse
+  offsetX = mx - ((mx - offsetX) * zoomFactor);
+  offsetY = my - ((my - offsetY) * zoomFactor);
+
+  scale *= zoomFactor;
   drawGrid();
 });
 
-// Pan
+// ====== Pan ======
 canvas.addEventListener("mousedown", (e) => {
   isDragging = true;
   startX = e.clientX - offsetX;
@@ -61,19 +90,16 @@ canvas.addEventListener("mousemove", (e) => {
   }
 });
 canvas.addEventListener("mouseup", () => { isDragging = false; });
+canvas.addEventListener("mouseleave", () => { isDragging = false; });
 
-// Place pixel
+// ====== Place Pixel ======
 canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = Math.floor((e.clientX - rect.left - offsetX) / (gridSize * scale)) * gridSize;
   const y = Math.floor((e.clientY - rect.top - offsetY) / (gridSize * scale)) * gridSize;
 
-  ctx.save();
-  ctx.translate(offsetX, offsetY);
-  ctx.scale(scale, scale);
-  ctx.fillStyle = currentColor;
-  ctx.fillRect(x, y, gridSize, gridSize);
-  ctx.restore();
+  pixels.push({ x, y, color: currentColor });
+  drawGrid();
 });
 
 // ====== Palette ======
@@ -93,15 +119,7 @@ colors.forEach(c => {
 });
 document.querySelector(".color-swatch").classList.add("selected");
 
-// ====== Chat Panel ======
-const sidePanel = document.getElementById("side-panel");
-document.getElementById("toggle-chat").addEventListener("click", () => {
-  sidePanel.classList.toggle("active");
-});
-document.getElementById("close-panel").addEventListener("click", () => {
-  sidePanel.classList.remove("active");
-});
-
+// ====== Chat Feed ======
 const feed = document.getElementById("chat-feed");
 const input = document.getElementById("chat-message");
 const sendBtn = document.getElementById("send-message");
@@ -111,7 +129,7 @@ sendBtn.addEventListener("click", () => {
     const msg = document.createElement("div");
     msg.className = "chat-msg";
     msg.textContent = input.value;
-    feed.appendChild(msg);
+    feed.insertBefore(msg, feed.querySelector(".chat-input"));
     input.value = "";
     feed.scrollTop = feed.scrollHeight;
   }
