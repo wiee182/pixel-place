@@ -1,27 +1,26 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const socket = io(); // connects automatically to same domain
+const socket = io(); // connects to same domain
 
-// Draw a pixel
+// Draw pixel function
 function drawPixel(x, y, color) {
   ctx.fillStyle = color;
-  ctx.fillRect(x, y, 10, 10); // each pixel = 10x10
+  ctx.fillRect(x, y, 10, 10); // 10x10 pixel block
 }
 
-// Click to place pixel
+// When user clicks on canvas
 canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = Math.floor((e.clientX - rect.left) / 10) * 10;
   const y = Math.floor((e.clientY - rect.top) / 10) * 10;
 
-  const color = "#" + Math.floor(Math.random()*16777215).toString(16); // random color
+  const color = "#" + Math.floor(Math.random() * 16777215).toString(16);
   drawPixel(x, y, color);
 
-  // Send to server
   socket.emit("placePixel", { x, y, color });
 });
 
-// Listen for others' pixels
+// Listen for other users' pixels
 socket.on("placePixel", (data) => {
   drawPixel(data.x, data.y, data.color);
 });
