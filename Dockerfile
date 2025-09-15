@@ -1,5 +1,5 @@
-# Use official Node.js 22 image from GitHub Container Registry
-FROM ghcr.io/nodejs/node:22-bullseye
+# Use stable Node.js 20 LTS image from Docker Hub
+FROM node:20-bullseye
 
 # Set working directory
 WORKDIR /app
@@ -7,7 +7,7 @@ WORKDIR /app
 # Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies (production)
+# Install dependencies (production only)
 RUN npm install --production
 
 # Copy the rest of the app
