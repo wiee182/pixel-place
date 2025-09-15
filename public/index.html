@@ -6,15 +6,17 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Canvas Container -->
   <div id="canvas-container">
+    <!-- Static Background -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- Main Pixel Canvas -->
     <canvas id="pixelCanvas"></canvas>
 
     <!-- Side Panel (Chat) -->
     <div id="side-panel">
       <div class="panel-header">
         <h3>Chat Feed</h3>
-        <button id="toggle-chat">Hide Chat</button>
       </div>
       <div id="chat-feed">
         <div class="chat-msg">Welcome to Pixel Canvas 🎨</div>
@@ -31,6 +33,7 @@
     <div id="palette"></div>
     <div id="toolbar">
       <button class="tool-btn" id="toggle-grid">Grid</button>
+      <button class="tool-btn" id="toggle-chat">Chat</button>
     </div>
   </div>
 
