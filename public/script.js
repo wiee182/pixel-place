@@ -12,7 +12,6 @@ const ctx = canvas.getContext("2d");
 
 let scale = 1, offsetX = 0, offsetY = 0;
 let isDragging = false, dragStartX = 0, dragStartY = 0;
-let pinchStartDist = null, pinchStartScale = 1;
 
 let currentColor = "#fffefe";
 let showGrid = true;
@@ -43,6 +42,7 @@ let soundEnabled = true;
 // ===== Audio =====
 const drawAudio = new Audio('sounds/draw.mp3'); drawAudio.volume = 0.2;
 const pointAudio = new Audio('sounds/point.mp3'); pointAudio.volume = 0.3;
+const emptyAudio = new Audio('sounds/empty.mp3'); emptyAudio.volume = 0.3;
 function playSound(audio){ if(!soundEnabled) return; const s = audio.cloneNode(); s.play(); }
 
 // ===== WebSocket =====
@@ -117,12 +117,7 @@ function handleIncomingPixel(p){
   const idx = chunk.findIndex(px=>px.x===p.x && px.y===p.y);
   if(idx>=0) chunk[idx]=p; else chunk.push(p);
 
-  ctx.save();
-  ctx.translate(offsetX, offsetY);
-  ctx.scale(scale, scale);
-  ctx.fillStyle=p.color;
-  ctx.fillRect(p.x,p.y,GRID_SIZE,GRID_SIZE);
-  ctx.restore();
+  drawGrid();
   playSound(drawAudio);
 }
 
@@ -174,7 +169,11 @@ canvas.addEventListener("mouseleave", ()=>{isDragging=false;});
 canvas.addEventListener("click", e=>{
   if(isDragging) return;
   const now = Date.now();
-  if(userPoints<=0 && now-lastActionTime<30000) return;
+  if(userPoints<=0 && now-lastActionTime<30000){
+    playSound(emptyAudio);
+    createShakeEffect(e);
+    return;
+  }
   if(userPoints<=0 && now-lastActionTime>=30000){ userPoints=1; lastActionTime=now; playSound(pointAudio); }
 
   const rect = canvas.getBoundingClientRect();
@@ -188,7 +187,30 @@ canvas.addEventListener("click", e=>{
   handleIncomingPixel(pixel);
   ws.send(JSON.stringify(pixel));
   updatePointsDisplay();
+  createShakeEffect(e);
 });
+
+// ===== Shaking Pixel Effect =====
+function createShakeEffect(e){
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX-rect.left;
+  const my = e.clientY-rect.top;
+
+  const size = GRID_SIZE*scale;
+  let offset = 2;
+  let count = 0;
+  const interval = setInterval(()=>{
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(scale, scale);
+    ctx.clearRect((mx-offsetX)/scale-2,(my-offsetY)/scale-2,GRID_SIZE+4,GRID_SIZE+4);
+    ctx.fillStyle=currentColor;
+    ctx.fillRect((mx-offsetX)/scale+Math.sin(count)*offset,(my-offsetY)/scale+Math.cos(count)*offset,GRID_SIZE,GRID_SIZE);
+    ctx.restore();
+    count++;
+    if(count>6) clearInterval(interval);
+  },30);
+}
 
 // ===== Floating Chat =====
 function appendChat(message){
