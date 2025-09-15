@@ -5,10 +5,9 @@ const bgCtx = bgCanvas.getContext("2d");
 const canvas = document.getElementById("pixelCanvas");
 const ctx = canvas.getContext("2d");
 
-const WORLD_WIDTH = 2000;   // narrower width
-const WORLD_HEIGHT = 4000;  // taller vertical canvas
+const WORLD_WIDTH = 2000;   // vertical canvas width
+const WORLD_HEIGHT = 4000;  // vertical canvas height
 const gridSize = 10;
-
 let currentColor = "#fffefe";
 let showGrid = true;
 
@@ -30,8 +29,8 @@ function resizeCanvas() {
   canvas.width = bgCanvas.width = canvas.parentElement.clientWidth;
   canvas.height = bgCanvas.height = canvas.parentElement.clientHeight;
 
-  offsetX = targetOffsetX = (canvas.width - WORLD_WIDTH) / 2; // center horizontally
-  offsetY = targetOffsetY = 0; // start at top
+  offsetX = targetOffsetX = (canvas.width - WORLD_WIDTH) / 2;
+  offsetY = targetOffsetY = 0;
 }
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
@@ -43,11 +42,12 @@ function drawGrid() {
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  const viewLeft = -offsetX/scale;
-  const viewTop = -offsetY/scale;
-  const viewRight = viewLeft + canvas.width/scale;
-  const viewBottom = viewTop + canvas.height/scale;
+  const viewLeft = -offsetX / scale;
+  const viewTop = -offsetY / scale;
+  const viewRight = viewLeft + canvas.width / scale;
+  const viewBottom = viewTop + canvas.height / scale;
 
+  // Draw pixels
   pixels.forEach(p => {
     if(p.x + gridSize >= viewLeft && p.x <= viewRight &&
        p.y + gridSize >= viewTop && p.y <= viewBottom) {
@@ -56,38 +56,42 @@ function drawGrid() {
     }
   });
 
+  // Draw grid only on pixel canvas
   if(showGrid) {
     ctx.strokeStyle = "#222";
     ctx.lineWidth = 1/scale;
     for(let x=Math.floor(viewLeft/gridSize)*gridSize; x<=viewRight; x+=gridSize){
-      ctx.beginPath(); ctx.moveTo(x,viewTop); ctx.lineTo(x,viewBottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, viewTop); ctx.lineTo(x, viewBottom); ctx.stroke();
     }
     for(let y=Math.floor(viewTop/gridSize)*gridSize; y<=viewBottom; y+=gridSize){
-      ctx.beginPath(); ctx.moveTo(viewLeft,y); ctx.lineTo(viewRight,y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(viewLeft, y); ctx.lineTo(viewRight, y); ctx.stroke();
     }
   }
+
   ctx.restore();
 }
 
-// ====== Zoom & Pan ======
+// ====== Zoom & Pan Limits ======
 function recalcZoomLimits(){
-  const minScaleX = canvas.width/WORLD_WIDTH;
-  const minScaleY = canvas.height/WORLD_HEIGHT;
-  return { min: Math.min(minScaleX,minScaleY), max:10 };
+  const minScaleX = canvas.width / WORLD_WIDTH;
+  const minScaleY = canvas.height / WORLD_HEIGHT;
+  return { min: Math.min(minScaleX,minScaleY), max: 10 };
 }
 function recalcOffsetLimits(){
   const scaledWidth = WORLD_WIDTH*scale;
   const scaledHeight = WORLD_HEIGHT*scale;
-  if(scaledWidth<=canvas.width){ offsetX=targetOffsetX=(canvas.width-scaledWidth)/2; }
-  else{ const minX = canvas.width-scaledWidth; const maxX=0; offsetX=Math.max(minX,Math.min(maxX,offsetX)); targetOffsetX=Math.max(minX,Math.min(maxX,targetOffsetX)); }
-  if(scaledHeight<=canvas.height){ offsetY=targetOffsetY=(canvas.height-scaledHeight)/2; }
-  else{ const minY = canvas.height-scaledHeight; const maxY=0; offsetY=Math.max(minY,Math.min(maxY,offsetY)); targetOffsetY=Math.max(minY,Math.min(maxY,targetOffsetY)); }
+  if(scaledWidth <= canvas.width){ offsetX = targetOffsetX = (canvas.width - scaledWidth)/2; }
+  else{ const minX = canvas.width-scaledWidth; const maxX = 0; offsetX = Math.max(minX, Math.min(maxX, offsetX)); targetOffsetX = Math.max(minX, Math.min(maxX, targetOffsetX)); }
+  if(scaledHeight <= canvas.height){ offsetY = targetOffsetY = (canvas.height - scaledHeight)/2; }
+  else{ const minY = canvas.height-scaledHeight; const maxY = 0; offsetY = Math.max(minY, Math.min(maxY, offsetY)); targetOffsetY = Math.max(minY, Math.min(maxY, targetOffsetY)); }
 }
+
+// ====== Animate ======
 function animate(){
   scale += (targetScale-scale)*0.15;
   offsetX += (targetOffsetX-offsetX)*0.15 + velocityX;
   offsetY += (targetOffsetY-offsetY)*0.15 + velocityY;
-  velocityX*=0.88; velocityY*=0.88;
+  velocityX *= 0.88; velocityY *= 0.88;
   recalcOffsetLimits();
   drawGrid();
   requestAnimationFrame(animate);
@@ -97,16 +101,18 @@ animate();
 // ====== Mouse Events ======
 canvas.addEventListener("wheel", e=>{
   e.preventDefault();
-  const zoomFactor = e.deltaY<0?1.1:0.9;
-  const {min,max} = recalcZoomLimits();
+  const zoomFactor = e.deltaY<0 ? 1.1 : 0.9;
+  const { min, max } = recalcZoomLimits();
   const rect = canvas.getBoundingClientRect();
-  const mouseX = e.clientX-rect.left;
-  const mouseY = e.clientY-rect.top;
-  const worldX = (mouseX-targetOffsetX)/targetScale;
-  const worldY = (mouseY-targetOffsetY)/targetScale;
-  targetScale = Math.max(min,Math.min(max,targetScale*zoomFactor));
-  targetOffsetX = mouseX-worldX*targetScale;
-  targetOffsetY = mouseY-worldY*targetScale;
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+  const worldX = (mouseX - targetOffsetX)/targetScale;
+  const worldY = (mouseY - targetOffsetY)/targetScale;
+
+  targetScale = Math.max(min, Math.min(max, targetScale * zoomFactor));
+  targetOffsetX = mouseX - worldX*targetScale;
+  targetOffsetY = mouseY - worldY*targetScale;
+  recalcOffsetLimits();
 });
 
 canvas.addEventListener("mousedown", e=>{
@@ -123,8 +129,8 @@ canvas.addEventListener("mousemove", e=>{
   targetOffsetX=newX; targetOffsetY=newY;
 });
 function endPan(){ isDragging=false; }
-canvas.addEventListener("mouseup",endPan);
-canvas.addEventListener("mouseleave",endPan);
+canvas.addEventListener("mouseup", endPan);
+canvas.addEventListener("mouseleave", endPan);
 
 canvas.addEventListener("click", e=>{
   if(dragMoved) return;
