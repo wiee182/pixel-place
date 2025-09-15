@@ -1,39 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pixel Canvas</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel Canvas</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<div id="background"></div>
-
-<div id="canvas-container">
-  <canvas id="pixelCanvas"></canvas>
-</div>
-
-<div id="bottom-left">
-  <div id="palette"></div>
-</div>
-
-<div id="chat-popup">
-  <div id="chat-header">
-    <span>Chat</span>
-    <button id="minimize-chat">–</button>
+  <div id="canvas-container">
+    <canvas id="bgCanvas"></canvas>
+    <canvas id="pixelCanvas"></canvas>
   </div>
-  <div id="chat-buttons">
-    <button id="toggle-grid" class="small-btn">Grid</button>
-    <button id="points-display" class="small-btn green">6/6</button>
-  </div>
-  <div id="chat-feed"></div>
-  <div id="chat-input">
-    <input type="text" id="chat-message" placeholder="Type a message...">
-    <button id="send-message">Send</button>
-  </div>
-</div>
 
-<script src="script.js"></script>
+  <!-- Floating Chat -->
+  <div id="chat-popup" class="hidden">
+    <div class="chat-header"><span>Chat</span></div>
+    <div id="chat-feed"></div>
+    <div class="chat-input">
+      <input type="text" id="chat-message" placeholder="Type a message...">
+      <button id="send-message">Send</button>
+    </div>
+  </div>
+
+  <!-- Bottom Toolbar -->
+  <div id="bottom-bar">
+    <div id="palette-container">
+      <div id="palette"></div>
+      <div id="points-display">6/6</div>
+    </div>
+    <div id="toolbar">
+      <button class="tool-btn" id="toggle-grid">Grid</button>
+      <button class="tool-btn" id="toggle-chat">Chat</button>
+      <button class="tool-btn" id="toggle-sound">🔊</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
