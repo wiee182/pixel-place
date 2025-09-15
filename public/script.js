@@ -21,14 +21,17 @@ colors.forEach((c,i)=>{
   sw.className="color-swatch";
   sw.style.background=c;
   sw.textContent=i;
-  sw.addEventListener("click",()=>{currentColor=c; document.querySelectorAll(".color-swatch").forEach(s=>s.classList.remove("selected")); sw.classList.add("selected"); });
+  sw.addEventListener("click",()=>{
+    currentColor=c; 
+    document.querySelectorAll(".color-swatch").forEach(s=>s.classList.remove("selected"));
+    sw.classList.add("selected");
+  });
   paletteDiv.appendChild(sw);
 });
 document.querySelector(".color-swatch").classList.add("selected");
 
 // ===== Controls =====
 const toggleGridBtn = document.getElementById("toggle-grid");
-const chatPopup = document.getElementById("chat-popup");
 const chatFeed = document.getElementById("chat-feed");
 const chatInput = document.getElementById("chat-message");
 const sendBtn = document.getElementById("send-message");
@@ -99,7 +102,6 @@ canvas.addEventListener("wheel", e=>{
 
 // ===== Controls Events =====
 toggleGridBtn.addEventListener("click", ()=>{showGrid=!showGrid; drawCanvas();});
-document.getElementById("toggle-chat").addEventListener("click", ()=>{chatPopup.classList.toggle("hidden");});
 toggleSoundBtn.addEventListener("click", ()=>{soundEnabled=!soundEnabled; toggleSoundBtn.textContent=soundEnabled?"🔊":"🔇";});
 
 // ===== Chat =====
@@ -118,3 +120,31 @@ setInterval(()=>{ if(userPoints<MAX_POINTS && Date.now()-lastAction>=COOLDOWN){ 
 // ===== Animate =====
 function animate(){ drawCanvas(); requestAnimationFrame(animate); }
 animate();
+
+// ===== WebSocket for live collaboration =====
+const wsProtocol = location.protocol==="https:"?"wss":"ws";
+const ws = new WebSocket(`${wsProtocol}://${location.host}`);
+ws.addEventListener("message", e=>{
+  const data = JSON.parse(e.data);
+  if(data.type==="draw"){ pixels.set(`${data.x},${data.y}`, {x:data.x,y:data.y,color:data.color}); drawCanvas(); }
+  if(data.type==="chat"){ appendChat(data.message); }
+});
+
+// Send pixels over WS
+canvas.addEventListener("click", e=>{
+  if(isDragging) return;
+  const rect=canvas.getBoundingClientRect();
+  const x=Math.max(0,Math.min(WORLD_WIDTH-GRID_SIZE,Math.floor((e.clientX-rect.left-offsetX)/scale/GRID_SIZE)*GRID_SIZE));
+  const y=Math.max(0,Math.min(WORLD_HEIGHT-GRID_SIZE,Math.floor((e.clientY-rect.top-offsetY)/scale/GRID_SIZE)*GRID_SIZE));
+  const msg={type:'draw',x,y,color:currentColor};
+  ws.send(JSON.stringify(msg));
+});
+
+// Send chat over WS
+function sendChat(){
+  const text=chatInput.value.trim();
+  if(!text) return;
+  const msg={type:'chat',message:text};
+  ws.send(JSON.stringify(msg));
+  chatInput.value="";
+}
