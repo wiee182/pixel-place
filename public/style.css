@@ -10,7 +10,7 @@ body, html { height: 100%; overflow: hidden; font-family: Arial, sans-serif; bac
   overflow: hidden;
 }
 
-/* Both canvases fill the container */
+/* Both canvases fill container */
 #bgCanvas, #pixelCanvas {
   position: absolute;
   top: 0;

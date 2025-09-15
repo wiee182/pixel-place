@@ -5,9 +5,10 @@ const bgCtx = bgCanvas.getContext("2d");
 const canvas = document.getElementById("pixelCanvas");
 const ctx = canvas.getContext("2d");
 
-const WORLD_WIDTH = 10000;
-const WORLD_HEIGHT = 10000;
+const WORLD_WIDTH = 2000;   // narrower width
+const WORLD_HEIGHT = 4000;  // taller vertical canvas
 const gridSize = 10;
+
 let currentColor = "#fffefe";
 let showGrid = true;
 
@@ -24,24 +25,18 @@ let panStartX = 0, panStartY = 0, downX = 0, downY = 0;
 // Pixels array
 const pixels = [];
 
-// ====== WebSocket Setup ======
-const ws = new WebSocket('ws://localhost:3000');
-ws.onmessage = (e) => {
-  const data = JSON.parse(e.data);
-  if(data.type === 'init') { pixels.push(...data.pixels); drawGrid(); }
-  if(data.type === 'draw') { pixels.push(data.pixel); drawGrid(); }
-};
-
 // ====== Resize Canvases ======
 function resizeCanvas() {
   canvas.width = bgCanvas.width = canvas.parentElement.clientWidth;
   canvas.height = bgCanvas.height = canvas.parentElement.clientHeight;
-  recalcOffsetLimits();
+
+  offsetX = targetOffsetX = (canvas.width - WORLD_WIDTH) / 2; // center horizontally
+  offsetY = targetOffsetY = 0; // start at top
 }
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
-// ====== Draw Grid & Pixels ======
+// ====== Draw Pixels & Grid ======
 function drawGrid() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.save();
@@ -104,13 +99,12 @@ canvas.addEventListener("wheel", e=>{
   e.preventDefault();
   const zoomFactor = e.deltaY<0?1.1:0.9;
   const {min,max} = recalcZoomLimits();
-  const newScale = Math.max(min,Math.min(max,targetScale*zoomFactor));
   const rect = canvas.getBoundingClientRect();
   const mouseX = e.clientX-rect.left;
   const mouseY = e.clientY-rect.top;
   const worldX = (mouseX-targetOffsetX)/targetScale;
   const worldY = (mouseY-targetOffsetY)/targetScale;
-  targetScale = newScale;
+  targetScale = Math.max(min,Math.min(max,targetScale*zoomFactor));
   targetOffsetX = mouseX-worldX*targetScale;
   targetOffsetY = mouseY-worldY*targetScale;
 });
@@ -143,7 +137,6 @@ canvas.addEventListener("click", e=>{
   const idx = pixels.findIndex(p=>p.x===x && p.y===y);
   if(idx>=0) pixels[idx]=pixel; else pixels.push(pixel);
   drawGrid();
-  ws.send(JSON.stringify({type:'draw',pixel}));
 });
 
 // ====== Palette ======
