@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Dark static background -->
+  <!-- Static dark background -->
   <div id="background"></div>
 
   <!-- Canvas container -->
@@ -15,17 +15,19 @@
     <canvas id="pixelCanvas" width="5000" height="5000"></canvas>
   </div>
 
-  <!-- Toolbar -->
-  <div id="toolbar">
+  <!-- Bottom left palette -->
+  <div id="bottom-left">
     <div id="palette"></div>
-    <button id="toggle-grid" class="tool-btn">Grid</button>
-    <button id="toggle-chat" class="tool-btn">Chat</button>
-    <button id="toggle-sound" class="tool-btn">🔊</button>
-    <button id="points-display" class="tool-btn green">6/6</button>
   </div>
 
   <!-- Floating chat popup -->
   <div id="chat-popup" class="hidden">
+    <div id="chat-buttons">
+      <button id="toggle-grid" class="small-btn">Grid</button>
+      <button id="toggle-chat" class="small-btn">Chat</button>
+      <button id="toggle-sound" class="small-btn">🔊</button>
+      <button id="points-display" class="small-btn green">6/6</button>
+    </div>
     <div id="chat-feed"></div>
     <div id="chat-input">
       <input type="text" id="chat-message" placeholder="Type a message...">

@@ -2,7 +2,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body, html { height: 100%; font-family: Arial, sans-serif; overflow: hidden; }
 
-/* Dark static background */
+/* Static dark background */
 #background {
   position: fixed;
   top:0; left:0;
@@ -19,7 +19,7 @@ body, html { height: 100%; font-family: Arial, sans-serif; overflow: hidden; }
   overflow: hidden;
 }
 
-/* Pixel canvas */
+/* Canvas */
 #pixelCanvas {
   position: absolute;
   top:0; left:0;
@@ -29,36 +29,18 @@ body, html { height: 100%; font-family: Arial, sans-serif; overflow: hidden; }
   z-index: -1;
 }
 
-/* Toolbar */
-#toolbar {
+/* Bottom-left palette */
+#bottom-left {
   position: fixed;
+  bottom: 10px;
   left: 10px;
-  top: 10px;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  flex-wrap: wrap;
   z-index: 10;
 }
-
-/* Buttons */
-.tool-btn {
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: none;
-  font-weight: bold;
-  cursor: pointer;
-  color: #fff;
-  background: #333;
-}
-.tool-btn.green { background: #2ecc71; }
-.tool-btn.red { background: #e74c3c; }
-.tool-btn:hover { background: #555; }
-
-/* Palette */
 #palette {
   display: flex;
-  flex-wrap: wrap;
-  max-width: 160px;
   gap: 4px;
 }
 .color-swatch {
@@ -124,9 +106,27 @@ body, html { height: 100%; font-family: Arial, sans-serif; overflow: hidden; }
 }
 #chat-input button:hover { background: #555; }
 
+/* Chat buttons */
+#chat-buttons {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+}
+.small-btn {
+  font-size: 12px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  background: #333;
+}
+.small-btn.green { background: #2ecc71; }
+.small-btn.red { background: #e74c3c; }
+.small-btn:hover { background: #555; }
+
 /* Mobile adjustments */
 @media(max-width:768px){
-  #toolbar { flex-direction: row; top: auto; bottom: 10px; left: 10px; }
-  #palette { max-width: 100%; flex-wrap: nowrap; overflow-x: auto; }
+  #bottom-left { bottom: 5px; left: 5px; }
   #chat-popup { width: 200px; max-height: 200px; }
 }

@@ -60,23 +60,23 @@ window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
 // ===== Pixel storage =====
-const chunks = new Map();
+const pixels = new Map();
 function handleIncomingPixel(p){
   const key = `${p.x},${p.y}`;
-  chunks.set(key,p);
-  drawGrid();
+  pixels.set(key,p);
+  drawCanvas();
   playSound(drawAudio);
 }
 
 // ===== Draw Grid & Pixels =====
-function drawGrid(){
+function drawCanvas(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
   // Draw pixels
-  chunks.forEach(p=>{
+  pixels.forEach(p=>{
     ctx.fillStyle = p.color;
     ctx.fillRect(p.x,p.y,GRID_SIZE,GRID_SIZE);
   });
@@ -117,7 +117,7 @@ toggleGridBtn.addEventListener("click",()=>{
   showGrid=!showGrid;
   toggleGridBtn.style.background=showGrid?"#fff":"#333";
   toggleGridBtn.style.color=showGrid?"#000":"#fff";
-  drawGrid();
+  drawCanvas();
 });
 
 // ===== Zoom & Pan =====
@@ -134,11 +134,11 @@ canvas.addEventListener("wheel", e=>{
   const mx = (e.clientX-rect.left-offsetX)/scale;
   const my = (e.clientY-rect.top-offsetY)/scale;
   zoomAt(mx,my,e.deltaY<0?1.1:0.9);
-  drawGrid();
+  drawCanvas();
 });
 
 canvas.addEventListener("mousedown", e=>{isDragging=true; dragStartX=e.clientX-offsetX; dragStartY=e.clientY-offsetY;});
-canvas.addEventListener("mousemove", e=>{if(isDragging){offsetX=e.clientX-dragStartX; offsetY=e.clientY-dragStartY; drawGrid();}});
+canvas.addEventListener("mousemove", e=>{if(isDragging){offsetX=e.clientX-dragStartX; offsetY=e.clientY-dragStartY; drawCanvas();}});
 canvas.addEventListener("mouseup", ()=>{isDragging=false;});
 canvas.addEventListener("mouseleave", ()=>{isDragging=false;});
 
@@ -148,7 +148,6 @@ canvas.addEventListener("click", e=>{
   const now = Date.now();
   if(userPoints<=0 && now-lastActionTime<30000){
     playSound(emptyAudio);
-    createShakeEffect(e);
     return;
   }
   if(userPoints<=0 && now-lastActionTime>=30000){ userPoints=1; lastActionTime=now; playSound(pointAudio); }
@@ -164,29 +163,7 @@ canvas.addEventListener("click", e=>{
   handleIncomingPixel(pixel);
   ws.send(JSON.stringify(pixel));
   updatePointsDisplay();
-  createShakeEffect(e);
 });
-
-// ===== Shake Effect =====
-function createShakeEffect(e){
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX-rect.left;
-  const my = e.clientY-rect.top;
-
-  const size = GRID_SIZE*scale;
-  let offset = 2, count = 0;
-  const interval = setInterval(()=>{
-    ctx.save();
-    ctx.translate(offsetX, offsetY);
-    ctx.scale(scale, scale);
-    ctx.clearRect((mx-offsetX)/scale-2,(my-offsetY)/scale-2,GRID_SIZE+4,GRID_SIZE+4);
-    ctx.fillStyle=currentColor;
-    ctx.fillRect((mx-offsetX)/scale+Math.sin(count)*offset,(my-offsetY)/scale+Math.cos(count)*offset,GRID_SIZE,GRID_SIZE);
-    ctx.restore();
-    count++;
-    if(count>6) clearInterval(interval);
-  },30);
-}
 
 // ===== Floating Chat =====
 function appendChat(message){
@@ -213,12 +190,10 @@ toggleSoundBtn.addEventListener("click",()=>{soundEnabled=!soundEnabled; toggleS
 // ===== Points Display =====
 function updatePointsDisplay(){
   if(userPoints>0){
-    pointsDisplay.classList.remove("red");
-    pointsDisplay.classList.add("green");
+    pointsDisplay.classList.remove("red"); pointsDisplay.classList.add("green");
     pointsDisplay.textContent=`${userPoints}/6`;
   } else {
-    pointsDisplay.classList.remove("green");
-    pointsDisplay.classList.add("red");
+    pointsDisplay.classList.remove("green"); pointsDisplay.classList.add("red");
     const now=Date.now();
     const timeLeft=Math.max(0,Math.ceil((30000-(now-lastActionTime))/1000));
     pointsDisplay.textContent=`0/6 ${timeLeft}s`;
@@ -230,5 +205,5 @@ setInterval(()=>{
 },30000);
 
 // ===== Animate =====
-function animate(){ drawGrid(); requestAnimationFrame(animate); }
+function animate(){ drawCanvas(); requestAnimationFrame(animate); }
 animate();
