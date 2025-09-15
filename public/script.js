@@ -1,4 +1,4 @@
-// ====== script.js (Collaborative Pixel Canvas with chat improvements) ======
+// ====== script.js (Collaborative Pixel Canvas with numbered palette) ======
 const canvas = document.getElementById("pixelCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -6,7 +6,7 @@ const ctx = canvas.getContext("2d");
 const WORLD_WIDTH = 10000;
 const WORLD_HEIGHT = 10000;
 const gridSize = 10;
-let currentColor = "#ff0000";
+let currentColor = "#fffefe";
 let showGrid = true;
 
 // Transform & inertia
@@ -55,7 +55,6 @@ function drawGrid() {
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  // Background
   ctx.fillStyle = "#111";
   ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
@@ -73,7 +72,7 @@ function drawGrid() {
     }
   });
 
-  // Draw grid if enabled
+  // Draw grid
   if (showGrid) {
     ctx.strokeStyle = "#222";
     ctx.lineWidth = 1 / scale;
@@ -221,24 +220,49 @@ canvas.addEventListener("click", e => {
   ws.send(JSON.stringify({ type: 'draw', pixel }));
 });
 
-// ====== Color Palette ======
+// ====== Numbered Color Palette ======
 const palette = document.getElementById("palette");
-const colors = ["#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff","#000000","#ffffff"];
-colors.forEach(c => {
+
+const colors = [
+  "#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100",
+  "#382314","#7c3f20","#c16f36","#feac6d","#ffd3b0","#fea5d0",
+  "#f04eb4","#e872ff","#a631d3","#531c8d","#531c8d","#0335be",
+  "#149dfe","#8df4fe","#00bea5","#17777f","#044522","#18862f",
+  "#60e121","#b1ff37","#fffea4","#fce011","#fe9e17","#f66e08",
+  "#550123","#99011a","#f20e0c","#ff7872"
+];
+
+palette.innerHTML = "";
+colors.forEach((color, index) => {
+  const wrapper = document.createElement("div");
+  wrapper.style.position = "relative";
+  wrapper.style.display = "flex";
+  wrapper.style.flexDirection = "column";
+  wrapper.style.alignItems = "center";
+
+  const label = document.createElement("span");
+  label.textContent = index;
+  label.style.fontSize = "12px";
+  label.style.color = "#fff";
+  label.style.marginBottom = "2px";
+  wrapper.appendChild(label);
+
   const swatch = document.createElement("div");
   swatch.className = "color-swatch";
-  swatch.style.background = c;
-  swatch.dataset.color = c;
+  swatch.style.background = color;
+  swatch.dataset.color = color;
   swatch.addEventListener("click", () => {
     document.querySelectorAll(".color-swatch").forEach(s => s.classList.remove("selected"));
     swatch.classList.add("selected");
-    currentColor = c;
+    currentColor = color;
   });
-  palette.appendChild(swatch);
+  wrapper.appendChild(swatch);
+
+  palette.appendChild(wrapper);
 });
 document.querySelector(".color-swatch").classList.add("selected");
 
-// ====== Grid Toggle Button ======
+// ====== Grid Toggle ======
 const gridBtn = document.getElementById("toggle-grid");
 gridBtn.style.background = "#fff";
 gridBtn.addEventListener("click", () => {
@@ -256,7 +280,7 @@ const chatToggleBtn = document.getElementById("toggle-chat");
 
 function sendMessage() {
   const text = input.value.trim();
-  if (text === "") return;
+  if (!text) return;
 
   const msg = document.createElement("div");
   msg.className = "chat-msg";
@@ -275,9 +299,5 @@ input.addEventListener("keydown", e => {
 });
 
 chatToggleBtn.addEventListener("click", () => {
-  if (sidePanel.style.display === "none" || !sidePanel.style.display) {
-    sidePanel.style.display = "flex";
-  } else {
-    sidePanel.style.display = "none";
-  }
+  sidePanel.style.display = sidePanel.style.display === "flex" ? "none" : "flex";
 });
