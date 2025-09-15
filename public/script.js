@@ -1,4 +1,4 @@
-// ====== script.js (Collaborative Pixel Canvas with numbered palette) ======
+// ====== script.js (Collaborative Pixel Canvas with fixed zoom) ======
 const canvas = document.getElementById("pixelCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -156,21 +156,27 @@ function snapToGrid(val) {
   return Math.floor(val / gridSize) * gridSize;
 }
 
-// ====== Zoom ======
+// ====== Zoom (centered on cursor) ======
 canvas.addEventListener("wheel", e => {
   e.preventDefault();
+
   const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
   const { min, max } = recalcZoomLimits();
+  const newScale = Math.max(min, Math.min(max, targetScale * zoomFactor));
 
   const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
 
-  targetOffsetX = mx - ((mx - targetOffsetX) * zoomFactor);
-  targetOffsetY = my - ((my - targetOffsetY) * zoomFactor);
+  // World coordinates under cursor before zoom
+  const worldX = (mouseX - targetOffsetX) / targetScale;
+  const worldY = (mouseY - targetOffsetY) / targetScale;
 
-  targetScale *= zoomFactor;
-  targetScale = Math.max(min, Math.min(max, targetScale));
+  targetScale = newScale;
+
+  // Recalculate offsets to keep cursor world point fixed
+  targetOffsetX = mouseX - worldX * targetScale;
+  targetOffsetY = mouseY - worldY * targetScale;
 });
 
 // ====== Pan ======
@@ -200,7 +206,7 @@ function endPan() { isDragging = false; }
 canvas.addEventListener("mouseup", endPan);
 canvas.addEventListener("mouseleave", endPan);
 
-// ====== Place Pixel & Send to Server ======
+// ====== Place Pixel & Send ======
 canvas.addEventListener("click", e => {
   if (dragMoved) return;
 

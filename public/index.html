@@ -8,19 +8,20 @@
 <body>
   <!-- Canvas Container -->
   <div id="canvas-container">
-    <canvas id="pixelCanvas" width="2000" height="2000"></canvas>
+    <canvas id="pixelCanvas"></canvas>
 
-    <!-- Chat Panel -->
+    <!-- Side Panel (Chat) -->
     <div id="side-panel">
       <div class="panel-header">
         <h3>Chat Feed</h3>
+        <button id="toggle-chat">Hide Chat</button>
       </div>
       <div id="chat-feed">
         <div class="chat-msg">Welcome to Pixel Canvas 🎨</div>
-      </div>
-      <div class="chat-input">
-        <input type="text" id="chat-message" placeholder="Type a message...">
-        <button id="send-message">Send</button>
+        <div class="chat-input">
+          <input type="text" id="chat-message" placeholder="Type a message...">
+          <button id="send-message">Send</button>
+        </div>
       </div>
     </div>
   </div>
@@ -29,9 +30,7 @@
   <div id="bottom-bar">
     <div id="palette"></div>
     <div id="toolbar">
-      <button class="tool-btn" id="account-btn">Account</button>
-      <button class="tool-btn" id="toggle-chat">Chat</button>
-      <button class="tool-btn" id="toggle-grid">Grid</button> <!-- New Grid button -->
+      <button class="tool-btn" id="toggle-grid">Grid</button>
     </div>
   </div>
 
