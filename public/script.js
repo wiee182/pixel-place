@@ -1,4 +1,4 @@
-// ====== script.js (Collaborative Pixel Canvas) ======
+// ====== script.js (Collaborative Pixel Canvas with chat improvements) ======
 const canvas = document.getElementById("pixelCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -27,15 +27,12 @@ const pixels = [];
 // ====== WebSocket Setup ======
 const ws = new WebSocket('ws://localhost:3000');
 
-// Receive updates from server
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
-
   if (data.type === 'init') {
     pixels.push(...data.pixels);
     drawGrid();
   }
-
   if (data.type === 'draw') {
     pixels.push(data.pixel);
     drawGrid();
@@ -221,8 +218,6 @@ canvas.addEventListener("click", e => {
   else pixels.push(pixel);
 
   drawGrid();
-
-  // Send pixel to server
   ws.send(JSON.stringify({ type: 'draw', pixel }));
 });
 
@@ -245,25 +240,44 @@ document.querySelector(".color-swatch").classList.add("selected");
 
 // ====== Grid Toggle Button ======
 const gridBtn = document.getElementById("toggle-grid");
-gridBtn.style.background = "#fff"; // White = ON
-
+gridBtn.style.background = "#fff";
 gridBtn.addEventListener("click", () => {
   showGrid = !showGrid;
   gridBtn.style.background = showGrid ? "#fff" : "#222";
   drawGrid();
 });
 
-// ====== Chat Feed ======
+// ====== Chat Feed & Button ======
 const feed = document.getElementById("chat-feed");
 const input = document.getElementById("chat-message");
 const sendBtn = document.getElementById("send-message");
-sendBtn.addEventListener("click", () => {
-  if (input.value.trim() !== "") {
-    const msg = document.createElement("div");
-    msg.className = "chat-msg";
-    msg.textContent = input.value;
-    feed.insertBefore(msg, feed.querySelector(".chat-input"));
-    input.value = "";
-    feed.scrollTop = feed.scrollHeight;
+const sidePanel = document.getElementById("side-panel");
+const chatToggleBtn = document.getElementById("toggle-chat");
+
+function sendMessage() {
+  const text = input.value.trim();
+  if (text === "") return;
+
+  const msg = document.createElement("div");
+  msg.className = "chat-msg";
+  msg.textContent = text;
+  feed.insertBefore(msg, feed.querySelector(".chat-input"));
+  input.value = "";
+  feed.scrollTop = feed.scrollHeight;
+}
+
+sendBtn.addEventListener("click", sendMessage);
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    sendMessage();
+    e.preventDefault();
+  }
+});
+
+chatToggleBtn.addEventListener("click", () => {
+  if (sidePanel.style.display === "none" || !sidePanel.style.display) {
+    sidePanel.style.display = "flex";
+  } else {
+    sidePanel.style.display = "none";
   }
 });
