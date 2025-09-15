@@ -7,31 +7,29 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Dark static background -->
+  <div id="background"></div>
+
+  <!-- Canvas container -->
   <div id="canvas-container">
-    <canvas id="bgCanvas"></canvas>
-    <canvas id="pixelCanvas"></canvas>
+    <canvas id="pixelCanvas" width="5000" height="5000"></canvas>
   </div>
 
-  <!-- Floating Chat -->
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <div id="palette"></div>
+    <button id="toggle-grid" class="tool-btn">Grid</button>
+    <button id="toggle-chat" class="tool-btn">Chat</button>
+    <button id="toggle-sound" class="tool-btn">🔊</button>
+    <button id="points-display" class="tool-btn green">6/6</button>
+  </div>
+
+  <!-- Floating chat popup -->
   <div id="chat-popup" class="hidden">
-    <div class="chat-header"><span>Chat</span></div>
     <div id="chat-feed"></div>
-    <div class="chat-input">
+    <div id="chat-input">
       <input type="text" id="chat-message" placeholder="Type a message...">
       <button id="send-message">Send</button>
-    </div>
-  </div>
-
-  <!-- Bottom Toolbar -->
-  <div id="bottom-bar">
-    <div id="palette-container">
-      <div id="palette"></div>
-      <div id="points-display">6/6</div>
-    </div>
-    <div id="toolbar">
-      <button class="tool-btn" id="toggle-grid">Grid</button>
-      <button class="tool-btn" id="toggle-chat">Chat</button>
-      <button class="tool-btn" id="toggle-sound">🔊</button>
     </div>
   </div>
 
