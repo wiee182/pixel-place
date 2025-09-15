@@ -1,3 +1,4 @@
+// server.js
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -6,21 +7,25 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-let pixels = {}; // store pixels { "x,y": "#color" }
-
+// ✅ Serve files from the "public" folder
 app.use(express.static("public"));
 
+// ✅ Handle WebSocket connections
 io.on("connection", (socket) => {
-  console.log("a user connected");
-
-  socket.emit("init", pixels);
+  console.log("A user connected");
 
   socket.on("placePixel", (data) => {
-    pixels[`${data.x},${data.y}`] = data.color;
-    io.emit("pixelPlaced", data);
+    // Broadcast to all users except sender
+    socket.broadcast.emit("placePixel", data);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("A user disconnected");
   });
 });
 
-server.listen(3000, () => {
-  console.log("Server running at http://localhost:3000");
+// ✅ Railway or local port
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
