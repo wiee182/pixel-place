@@ -6,44 +6,32 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Canvas Container -->
+  <!-- Canvas -->
   <div id="canvas-container">
-    <canvas id="pixelCanvas" width="600" height="400"></canvas>
+    <canvas id="pixelCanvas" width="2000" height="2000"></canvas>
 
-    <!-- Overlay (top-left) -->
-    <div id="overlay">
-      <button class="overlay-btn">Tweaks</button>
-      <button class="overlay-btn">Volume</button>
-      <button class="overlay-btn">Inspect</button>
-    </div>
-
-    <!-- Side Panel (Activity Feed) -->
+    <!-- Side Panel -->
     <div id="side-panel" class="collapsed">
-      <h3>Activity Feed</h3>
-      <div id="feed">
-        <div class="feed-item">Welcome to Pixel Canvas 🎨</div>
+      <div class="panel-header">
+        <h3>Chat Feed</h3>
+        <button id="close-panel">✖</button>
+      </div>
+      <div id="chat-feed">
+        <div class="chat-msg">Welcome to Pixel Canvas</div>
+      </div>
+      <div class="chat-input">
+        <input type="text" id="chat-message" placeholder="Type a message...">
+        <button id="send-message">Send</button>
       </div>
     </div>
   </div>
 
-  <!-- Bottom Bar -->
+  <!-- Bottom Toolbar -->
   <div id="bottom-bar">
-    <!-- Palette -->
-    <div id="palette">
-      <div class="color-swatch selected" data-color="#ff0000" style="background:#ff0000;"></div>
-      <div class="color-swatch" data-color="#00ff00" style="background:#00ff00;"></div>
-      <div class="color-swatch" data-color="#0000ff" style="background:#0000ff;"></div>
-      <div class="color-swatch" data-color="#ffff00" style="background:#ffff00;"></div>
-      <div class="color-swatch" data-color="#ff00ff" style="background:#ff00ff;"></div>
-      <div class="color-swatch" data-color="#00ffff" style="background:#00ffff;"></div>
-      <div class="color-swatch" data-color="#ffffff" style="background:#ffffff;"></div>
-      <div class="color-swatch" data-color="#000000" style="background:#000000;"></div>
-    </div>
-
-    <!-- Toolbar -->
+    <div id="palette"></div>
     <div id="toolbar">
-      <button class="tool-btn active" data-action="draw">Draw</button>
-      <button class="tool-btn" data-action="toggle-activity">Activity</button>
+      <button class="tool-btn" id="account-btn">Account</button>
+      <button class="tool-btn" id="toggle-chat">Chat</button>
     </div>
   </div>
 

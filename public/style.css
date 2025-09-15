@@ -1,69 +1,32 @@
 /* Reset */
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-  background: #0d0d0d;
-  color: #fff;
-  font-family: "Segoe UI", Tahoma, sans-serif;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
+body, html { height: 100%; overflow: hidden; font-family: Arial, sans-serif; background: #111; }
 
 /* Canvas */
 #canvas-container {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #111;
   position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 #pixelCanvas {
-  border: 2px solid #222;
+  background: #fff;
   image-rendering: pixelated;
   cursor: crosshair;
-  box-shadow: 0 0 25px rgba(0,0,0,0.7);
-  max-width: 100%;
-  max-height: 100%;
 }
 
-/* Overlay (top-left) */
-#overlay {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  display: flex;
-  gap: 8px;
-}
-.overlay-btn {
-  background: rgba(25,25,25,0.9);
-  border: 2px solid #444;
-  padding: 6px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: white;
-  font-size: 14px;
-  font-weight: bold;
-  box-shadow: 0 0 6px rgba(0,0,0,0.6);
-  transition: all 0.2s ease;
-}
-.overlay-btn:hover {
-  background: rgba(45,45,45,0.95);
-  border-color: #888;
-  transform: translateY(-1px);
-}
-
-/* Bottom Bar */
+/* Bottom Toolbar */
 #bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(20,20,20,0.95);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(15,15,15,0.95);
-  padding: 10px;
+  padding: 8px;
   border-top: 2px solid #333;
-  box-shadow: 0 -3px 8px rgba(0,0,0,0.4);
 }
 
 /* Palette */
@@ -71,66 +34,80 @@ body {
   display: flex;
   gap: 6px;
   overflow-x: auto;
-  max-width: 75%;
+  scrollbar-width: thin;
 }
 .color-swatch {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border: 2px solid #444;
   border-radius: 4px;
   cursor: pointer;
-  transition: transform 0.1s, border 0.2s;
 }
-.color-swatch:hover { transform: scale(1.1); }
 .color-swatch.selected { border: 2px solid #fff; }
 
 /* Toolbar */
 #toolbar { display: flex; gap: 10px; }
 .tool-btn {
-  background: rgba(30,30,30,0.9);
-  border: 2px solid #444;
-  padding: 6px 14px;
+  padding: 6px 12px;
+  border: none;
   border-radius: 6px;
+  background: #333;
+  color: white;
   cursor: pointer;
-  transition: all 0.2s;
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: 0 0 5px rgba(0,0,0,0.5);
+  font-weight: bold;
 }
-.tool-btn:hover { background: rgba(60,60,60,0.95); }
-.tool-btn.active {
-  background: rgba(100,100,100,0.95);
-  border-color: #aaa;
-  box-shadow: 0 0 10px rgba(255,255,255,0.3);
-}
+.tool-btn:hover { background: #555; }
 
 /* Side Panel */
 #side-panel {
   position: absolute;
   right: 0;
   top: 0;
-  bottom: 50px;
-  width: 260px;
-  background: rgba(20,20,20,0.95);
-  border-left: 2px solid #333;
-  padding: 10px;
-  overflow-y: auto;
-  font-size: 14px;
-  z-index: 5;
+  bottom: 40px;
+  width: 300px;
+  background: rgba(30,30,30,0.95);
+  border-left: 2px solid #444;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
   transition: transform 0.3s ease;
 }
-#side-panel.collapsed { transform: translateX(100%); }
-#side-panel h3 {
-  margin-bottom: 8px;
-  font-size: 16px;
-  border-bottom: 1px solid #444;
-  padding-bottom: 4px;
+#side-panel.active { transform: translateX(0); }
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #222;
+  padding: 6px;
 }
-.feed-item {
-  background: rgba(40,40,40,0.85);
+#chat-feed {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.chat-msg {
+  padding: 6px;
+  margin-bottom: 6px;
+  background: #444;
+  border-radius: 4px;
+}
+.chat-input {
+  display: flex;
+  padding: 6px;
+  gap: 6px;
+}
+.chat-input input {
+  flex: 1;
   padding: 6px;
   border-radius: 4px;
-  font-size: 13px;
-  border: 1px solid #333;
-  margin-bottom: 6px;
+  border: none;
 }
+.chat-input button {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  background: #555;
+  color: white;
+  cursor: pointer;
+}
+.chat-input button:hover { background: #777; }
