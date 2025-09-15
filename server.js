@@ -1,29 +1,34 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
+const WebSocket = require('ws');
+const express = require('express');
+const http = require('http');
 
 const app = express();
+app.use(express.static('public'));
+
 const server = http.createServer(app);
-const io = new Server(server);
+const wss = new WebSocket.Server({ server });
 
-// Serve frontend from "public" folder
-app.use(express.static("public"));
+const pixels = [];
 
-// WebSocket logic
-io.on("connection", (socket) => {
-  console.log("A user connected");
+wss.on('connection', ws => {
+  // Send existing pixels to new user
+  ws.send(JSON.stringify({ type: 'init', pixels }));
 
-  socket.on("placePixel", (data) => {
-    io.emit("placePixel", data); // send to everyone (including sender)
-  });
+  ws.on('message', message => {
+    const data = JSON.parse(message);
 
-  socket.on("disconnect", () => {
-    console.log("A user disconnected");
+    if (data.type === 'draw') {
+      // Update or add pixel
+      const idx = pixels.findIndex(p => p.x === data.x && p.y === data.y);
+      if (idx >= 0) pixels[idx] = data; else pixels.push(data);
+
+      // Broadcast to all clients
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify(data));
+      });
+    }
   });
 });
 
-// Railway or local port
 const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
