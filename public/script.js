@@ -1,4 +1,4 @@
-// ====== script.js (rewritten full version with Grid toggle) ======
+// ====== script.js (Collaborative Pixel Canvas) ======
 const canvas = document.getElementById("pixelCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -7,7 +7,7 @@ const WORLD_WIDTH = 10000;
 const WORLD_HEIGHT = 10000;
 const gridSize = 10;
 let currentColor = "#ff0000";
-let showGrid = true; // Grid visible by default
+let showGrid = true;
 
 // Transform & inertia
 let scale = 1, targetScale = 1;
@@ -21,8 +21,26 @@ let panStartX = 0, panStartY = 0;
 let downX = 0, downY = 0;
 let dragMoved = false;
 
-// Pixel storage
+// Store all pixels
 const pixels = [];
+
+// ====== WebSocket Setup ======
+const ws = new WebSocket('ws://localhost:3000');
+
+// Receive updates from server
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+
+  if (data.type === 'init') {
+    pixels.push(...data.pixels);
+    drawGrid();
+  }
+
+  if (data.type === 'draw') {
+    pixels.push(data.pixel);
+    drawGrid();
+  }
+};
 
 // ====== Resize Canvas ======
 function resizeCanvas() {
@@ -44,7 +62,6 @@ function drawGrid() {
   ctx.fillStyle = "#111";
   ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
-  // Viewport boundaries
   const viewLeft = -offsetX / scale;
   const viewTop = -offsetY / scale;
   const viewRight = viewLeft + canvas.width / scale;
@@ -63,7 +80,6 @@ function drawGrid() {
   if (showGrid) {
     ctx.strokeStyle = "#222";
     ctx.lineWidth = 1 / scale;
-
     const startX = Math.floor(viewLeft / gridSize) * gridSize;
     const endX = Math.ceil(viewRight / gridSize) * gridSize;
     for (let x = startX; x <= endX; x += gridSize) {
@@ -72,7 +88,6 @@ function drawGrid() {
       ctx.lineTo(x, viewBottom);
       ctx.stroke();
     }
-
     const startY = Math.floor(viewTop / gridSize) * gridSize;
     const endY = Math.ceil(viewBottom / gridSize) * gridSize;
     for (let y = startY; y <= endY; y += gridSize) {
@@ -86,14 +101,14 @@ function drawGrid() {
   ctx.restore();
 }
 
-// ====== Dynamic Zoom Limits ======
+// ====== Zoom Limits ======
 function recalcZoomLimits() {
   const minScaleX = canvas.width / WORLD_WIDTH;
   const minScaleY = canvas.height / WORLD_HEIGHT;
   return { min: Math.min(minScaleX, minScaleY), max: 10 };
 }
 
-// ====== Animation Loop ======
+// ====== Animate Smooth Pan + Zoom ======
 function animate() {
   scale += (targetScale - scale) * 0.15;
   offsetX += (targetOffsetX - offsetX) * 0.15 + velocityX;
@@ -113,7 +128,6 @@ function recalcOffsetLimits() {
   const scaledWidth = WORLD_WIDTH * scale;
   const scaledHeight = WORLD_HEIGHT * scale;
 
-  // Horizontal
   if (scaledWidth <= canvas.width) {
     offsetX = targetOffsetX = (canvas.width - scaledWidth) / 2;
   } else {
@@ -123,7 +137,6 @@ function recalcOffsetLimits() {
     targetOffsetX = Math.max(minX, Math.min(maxX, targetOffsetX));
   }
 
-  // Vertical
   if (scaledHeight <= canvas.height) {
     offsetY = targetOffsetY = (canvas.height - scaledHeight) / 2;
   } else {
@@ -137,9 +150,10 @@ function recalcOffsetLimits() {
 // ====== Helpers ======
 function worldFromEvent(e) {
   const rect = canvas.getBoundingClientRect();
-  const screenX = e.clientX - rect.left;
-  const screenY = e.clientY - rect.top;
-  return { worldX: (screenX - offsetX) / scale, worldY: (screenY - offsetY) / scale };
+  return {
+    worldX: (e.clientX - rect.left - offsetX) / scale,
+    worldY: (e.clientY - rect.top - offsetY) / scale
+  };
 }
 
 function snapToGrid(val) {
@@ -190,7 +204,7 @@ function endPan() { isDragging = false; }
 canvas.addEventListener("mouseup", endPan);
 canvas.addEventListener("mouseleave", endPan);
 
-// ====== Place Pixel ======
+// ====== Place Pixel & Send to Server ======
 canvas.addEventListener("click", e => {
   if (dragMoved) return;
 
@@ -201,11 +215,15 @@ canvas.addEventListener("click", e => {
   x = Math.max(0, Math.min(WORLD_WIDTH - gridSize, x));
   y = Math.max(0, Math.min(WORLD_HEIGHT - gridSize, y));
 
+  const pixel = { x, y, color: currentColor };
   const idx = pixels.findIndex(p => p.x === x && p.y === y);
-  if (idx >= 0) pixels[idx].color = currentColor;
-  else pixels.push({ x, y, color: currentColor });
+  if (idx >= 0) pixels[idx] = pixel;
+  else pixels.push(pixel);
 
   drawGrid();
+
+  // Send pixel to server
+  ws.send(JSON.stringify({ type: 'draw', pixel }));
 });
 
 // ====== Color Palette ======
@@ -231,7 +249,7 @@ gridBtn.style.background = "#fff"; // White = ON
 
 gridBtn.addEventListener("click", () => {
   showGrid = !showGrid;
-  gridBtn.style.background = showGrid ? "#fff" : "#222"; // White = ON, Dark = OFF
+  gridBtn.style.background = showGrid ? "#fff" : "#222";
   drawGrid();
 });
 
