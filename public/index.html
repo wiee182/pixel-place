@@ -1,38 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>Pixel Canvas</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Main canvas container -->
+  <!-- Canvas Container -->
   <div id="canvas-container">
-    <canvas id="pixelCanvas" width="1000" height="600"></canvas>
+    <canvas id="pixelCanvas" width="600" height="400"></canvas>
+
+    <!-- Overlay (top-left) -->
+    <div id="overlay">
+      <button class="overlay-btn">Tweaks</button>
+      <button class="overlay-btn">Volume</button>
+      <button class="overlay-btn">Inspect</button>
+    </div>
+
+    <!-- Side Panel (Activity Feed) -->
+    <div id="side-panel" class="collapsed">
+      <h3>Activity Feed</h3>
+      <div id="feed">
+        <div class="feed-item">Welcome to Pixel Canvas 🎨</div>
+      </div>
+    </div>
   </div>
 
-  <!-- Bottom UI bar -->
+  <!-- Bottom Bar -->
   <div id="bottom-bar">
+    <!-- Palette -->
     <div id="palette">
-      <!-- Colors will be generated dynamically -->
+      <div class="color-swatch selected" data-color="#ff0000" style="background:#ff0000;"></div>
+      <div class="color-swatch" data-color="#00ff00" style="background:#00ff00;"></div>
+      <div class="color-swatch" data-color="#0000ff" style="background:#0000ff;"></div>
+      <div class="color-swatch" data-color="#ffff00" style="background:#ffff00;"></div>
+      <div class="color-swatch" data-color="#ff00ff" style="background:#ff00ff;"></div>
+      <div class="color-swatch" data-color="#00ffff" style="background:#00ffff;"></div>
+      <div class="color-swatch" data-color="#ffffff" style="background:#ffffff;"></div>
+      <div class="color-swatch" data-color="#000000" style="background:#000000;"></div>
     </div>
 
+    <!-- Toolbar -->
     <div id="toolbar">
-      <button class="tool-btn">Tweaks</button>
-      <button class="tool-btn">Volume</button>
-      <button class="tool-btn">Inspect</button>
-      <button class="tool-btn">Activity</button>
+      <button class="tool-btn active" data-action="draw">Draw</button>
+      <button class="tool-btn" data-action="toggle-activity">Activity</button>
     </div>
   </div>
 
-  <!-- Side panel (chat / activity feed placeholder) -->
-  <div id="side-panel">
-    <h3>Activity Feed</h3>
-    <div id="feed"></div>
-  </div>
-
-  <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
