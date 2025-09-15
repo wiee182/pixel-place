@@ -1,31 +1,29 @@
-// ====== script.js (fixed) ======
-
-// ====== Config / World bounds ======
+// ====== script.js (optimized + clamped) ======
 const canvas = document.getElementById("pixelCanvas");
 const ctx = canvas.getContext("2d");
 
-const WORLD_WIDTH = 2000;   // world / grid pixel width (keeps drawing inside this)
-const WORLD_HEIGHT = 2000;  // world / grid pixel height
+// ====== Config ======
+const WORLD_WIDTH = 10000;
+const WORLD_HEIGHT = 10000;
 const gridSize = 10;
-
 let currentColor = "#ff0000";
 
-// Smooth transform + inertia
+// Transform & inertia
 let scale = 1, targetScale = 1;
 let offsetX = 0, offsetY = 0;
 let targetOffsetX = 0, targetOffsetY = 0;
 let velocityX = 0, velocityY = 0;
 
-// Interaction state
+// Interaction
 let isDragging = false;
 let panStartX = 0, panStartY = 0;
 let downX = 0, downY = 0;
 let dragMoved = false;
 
-// Pixel storage (world coordinates, snapped to grid)
+// Pixel storage
 const pixels = [];
 
-// ====== Resize canvas to fill its container ======
+// ====== Resize Canvas ======
 function resizeCanvas() {
   canvas.width = canvas.parentElement.clientWidth;
   canvas.height = canvas.parentElement.clientHeight;
@@ -33,57 +31,75 @@ function resizeCanvas() {
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
-// ====== Drawing ======
+// ====== Draw Grid & Pixels (optimized for viewport) ======
 function drawGrid() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  // Background over the full world (so everything outside the world is visually different)
+  // Background
   ctx.fillStyle = "#111";
   ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
-  // Draw placed pixels (only those inside world)
-  for (let i = 0; i < pixels.length; i++) {
-    const p = pixels[i];
-    if (p.x >= 0 && p.x < WORLD_WIDTH && p.y >= 0 && p.y < WORLD_HEIGHT) {
+  // Draw visible pixels
+  const viewLeft = -offsetX / scale;
+  const viewTop = -offsetY / scale;
+  const viewRight = viewLeft + canvas.width / scale;
+  const viewBottom = viewTop + canvas.height / scale;
+
+  pixels.forEach(p => {
+    if (p.x + gridSize >= viewLeft && p.x <= viewRight &&
+        p.y + gridSize >= viewTop && p.y <= viewBottom) {
       ctx.fillStyle = p.color;
       ctx.fillRect(p.x, p.y, gridSize, gridSize);
     }
-  }
+  });
 
-  // Grid lines (draw across full world)
+  // Grid lines only in viewport
   ctx.strokeStyle = "#222";
   ctx.lineWidth = 1 / scale;
-  for (let x = 0; x <= WORLD_WIDTH; x += gridSize) {
+
+  const startX = Math.floor(viewLeft / gridSize) * gridSize;
+  const endX = Math.ceil(viewRight / gridSize) * gridSize;
+  for (let x = startX; x <= endX; x += gridSize) {
     ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, WORLD_HEIGHT);
+    ctx.moveTo(x, viewTop);
+    ctx.lineTo(x, viewBottom);
     ctx.stroke();
   }
-  for (let y = 0; y <= WORLD_HEIGHT; y += gridSize) {
+
+  const startY = Math.floor(viewTop / gridSize) * gridSize;
+  const endY = Math.ceil(viewBottom / gridSize) * gridSize;
+  for (let y = startY; y <= endY; y += gridSize) {
     ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(WORLD_WIDTH, y);
+    ctx.moveTo(viewLeft, y);
+    ctx.lineTo(viewRight, y);
     ctx.stroke();
   }
 
   ctx.restore();
 }
 
-// ====== Animation loop (smooth transform + inertia) ======
+// ====== Animate Smooth Transform + Inertia + Clamp ======
 function animate() {
-  // smooth scale
   scale += (targetScale - scale) * 0.15;
-
-  // smooth offsets + apply inertia velocity
   offsetX += (targetOffsetX - offsetX) * 0.15 + velocityX;
   offsetY += (targetOffsetY - offsetY) * 0.15 + velocityY;
 
-  // damping velocity
   velocityX *= 0.88;
   velocityY *= 0.88;
+
+  // Clamp offset so world stays visible
+  const minX = Math.min(0, canvas.width - WORLD_WIDTH * scale);
+  const minY = Math.min(0, canvas.height - WORLD_HEIGHT * scale);
+  const maxX = 0;
+  const maxY = 0;
+  offsetX = Math.max(minX, Math.min(maxX, offsetX));
+  offsetY = Math.max(minY, Math.min(maxY, offsetY));
+  targetOffsetX = Math.max(minX, Math.min(maxX, targetOffsetX));
+
+  targetOffsetY = Math.max(minY, Math.min(maxY, targetOffsetY));
 
   drawGrid();
   requestAnimationFrame(animate);
@@ -93,12 +109,9 @@ animate();
 // ====== Helpers ======
 function worldFromEvent(e) {
   const rect = canvas.getBoundingClientRect();
-  // Use the current (rendered) transform (offsetX/offsetY and scale) to map screen->world
   const screenX = e.clientX - rect.left;
   const screenY = e.clientY - rect.top;
-  const worldX = (screenX - offsetX) / scale;
-  const worldY = (screenY - offsetY) / scale;
-  return { worldX, worldY };
+  return { worldX: (screenX - offsetX) / scale, worldY: (screenY - offsetY) / scale };
 }
 
 function snapToGrid(val) {
@@ -106,15 +119,13 @@ function snapToGrid(val) {
 }
 
 // ====== Zoom (centered on mouse) ======
-canvas.addEventListener("wheel", (e) => {
+canvas.addEventListener("wheel", e => {
   e.preventDefault();
   const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-
   const rect = canvas.getBoundingClientRect();
   const mx = e.clientX - rect.left;
   const my = e.clientY - rect.top;
 
-  // adjust target offsets so zoom is centered around mouse
   targetOffsetX = mx - ((mx - targetOffsetX) * zoomFactor);
   targetOffsetY = my - ((my - targetOffsetY) * zoomFactor);
 
@@ -122,29 +133,20 @@ canvas.addEventListener("wheel", (e) => {
   targetScale = Math.max(0.5, Math.min(10, targetScale));
 });
 
-// ====== Pan with drag + inertia ======
-canvas.addEventListener("mousedown", (e) => {
-  if (e.button !== 0) return; // left only
+// ====== Pan with Drag + Inertia ======
+canvas.addEventListener("mousedown", e => {
+  if (e.button !== 0) return;
   isDragging = true;
-
-  // For panning math: store pan start relative to target offset
   panStartX = e.clientX - targetOffsetX;
   panStartY = e.clientY - targetOffsetY;
-
-  // For drag detection (prevent drawing while panning)
-  downX = e.clientX;
-  downY = e.clientY;
+  downX = e.clientX; downY = e.clientY;
   dragMoved = false;
-
-  // reset velocity while actively dragging
-  velocityX = 0;
-  velocityY = 0;
+  velocityX = 0; velocityY = 0;
 });
 
-canvas.addEventListener("mousemove", (e) => {
+canvas.addEventListener("mousemove", e => {
   if (!isDragging) return;
 
-  // detect if user moved more than a threshold (so clicks won't create pixels)
   if (!dragMoved) {
     const dx = e.clientX - downX;
     const dy = e.clientY - downY;
@@ -153,45 +155,33 @@ canvas.addEventListener("mousemove", (e) => {
 
   const newX = e.clientX - panStartX;
   const newY = e.clientY - panStartY;
-
-  // estimate velocity (used for inertia once user releases)
   velocityX = newX - targetOffsetX;
   velocityY = newY - targetOffsetY;
-
   targetOffsetX = newX;
   targetOffsetY = newY;
 });
 
-function endPan() {
-  isDragging = false;
-}
+function endPan() { isDragging = false; }
 canvas.addEventListener("mouseup", endPan);
 canvas.addEventListener("mouseleave", endPan);
 
-// ====== Place pixel (only when not dragging) ======
-canvas.addEventListener("click", (e) => {
-  // If the user actually dragged, don't place a pixel
+// ====== Place Pixel (only if not dragging) ======
+canvas.addEventListener("click", e => {
   if (dragMoved) return;
 
-  // Map screen -> world using the *current* transform (offsetX/offsetY & scale used for rendering)
   const { worldX, worldY } = worldFromEvent(e);
-
   let x = snapToGrid(worldX);
   let y = snapToGrid(worldY);
 
-  // clamp into world bounds
+  // Clamp inside world
   x = Math.max(0, Math.min(WORLD_WIDTH - gridSize, x));
   y = Math.max(0, Math.min(WORLD_HEIGHT - gridSize, y));
 
-  // update existing pixel in same cell or add new
+  // Replace existing pixel at same grid cell or add new
   const idx = pixels.findIndex(p => p.x === x && p.y === y);
-  if (idx >= 0) {
-    pixels[idx].color = currentColor;
-  } else {
-    pixels.push({ x, y, color: currentColor });
-  }
+  if (idx >= 0) pixels[idx].color = currentColor;
+  else pixels.push({ x, y, color: currentColor });
 
-  // redraw immediate
   drawGrid();
 });
 
@@ -212,11 +202,10 @@ colors.forEach(c => {
 });
 document.querySelector(".color-swatch").classList.add("selected");
 
-// ====== Chat Feed (unchanged) ======
+// ====== Chat Feed ======
 const feed = document.getElementById("chat-feed");
 const input = document.getElementById("chat-message");
 const sendBtn = document.getElementById("send-message");
-
 sendBtn.addEventListener("click", () => {
   if (input.value.trim() !== "") {
     const msg = document.createElement("div");
