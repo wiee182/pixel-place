@@ -195,12 +195,10 @@ canvas.addEventListener("touchmove", e=>{
     const dx=e.touches[0].clientX-e.touches[1].clientX;
     const dy=e.touches[0].clientY-e.touches[1].clientY;
     const dist=Math.hypot(dx,dy);
-    const zoom=dist/pinchStartDist;
     const rect = canvas.getBoundingClientRect();
     const centerX = ((e.touches[0].clientX+e.touches[1].clientX)/2-rect.left-offsetX)/scale;
     const centerY = ((e.touches[0].clientY+e.touches[1].clientY)/2-rect.top-offsetY)/scale;
-    zoomAt(centerX, centerY, zoom*pinchStartScale/scale);
-    drawGrid();
+    zoomAt(centerX, centerY, dist/pinchStartDist*pinchStartScale/scale);
   }
 });
 canvas.addEventListener("touchend", e=>{if(e.touches.length===0) isDragging=false; pinchStartDist=null;});
@@ -219,7 +217,7 @@ canvas.addEventListener("click", e=>{
   const y = Math.max(0, Math.min(WORLD_HEIGHT-GRID_SIZE, Math.floor(worldY/GRID_SIZE)*GRID_SIZE));
 
   const pixel = {type:'draw', x, y, color:currentColor};
-  userPoints--; lastActionTime=now;
+  userPoints--; lastActionTime=Date.now();
   handleIncomingPixel(pixel);
   ws.send(JSON.stringify(pixel));
   updatePointsDisplay();
@@ -242,7 +240,6 @@ function sendMessage(){
 
 // ===== Show/Hide Chat =====
 document.getElementById("toggle-chat").addEventListener("click",()=>{chatPopup.classList.toggle("hidden");});
-document.getElementById("close-chat").addEventListener("click",()=>{chatPopup.classList.add("hidden");});
 
 // ===== Toggle Sound =====
 toggleSoundBtn.addEventListener("click",()=>{soundEnabled=!soundEnabled; toggleSoundBtn.textContent=soundEnabled?"🔊":"🔇";});
