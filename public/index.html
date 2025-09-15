@@ -1,16 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Pixel Canvas</title>
-  <style>
-    canvas { border: 1px solid black; cursor: crosshair; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <h1>Pixel Canvas</h1>
   <canvas id="canvas" width="500" height="500"></canvas>
-  <input type="color" id="colorPicker" value="#ff0000">
 
+  <!-- Socket.IO client -->
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
 </body>
