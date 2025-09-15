@@ -117,7 +117,6 @@ function handleIncomingPixel(p){
   const idx = chunk.findIndex(px=>px.x===p.x && px.y===p.y);
   if(idx>=0) chunk[idx]=p; else chunk.push(p);
 
-  // Pixel pop animation
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
@@ -166,42 +165,10 @@ canvas.addEventListener("wheel", e=>{
   zoomAt(mx,my,e.deltaY<0?1.1:0.9);
   drawGrid();
 });
-
-// Pan
 canvas.addEventListener("mousedown", e=>{isDragging=true; dragStartX=e.clientX-offsetX; dragStartY=e.clientY-offsetY;});
 canvas.addEventListener("mousemove", e=>{if(isDragging){offsetX=e.clientX-dragStartX; offsetY=e.clientY-dragStartY; drawGrid();}});
 canvas.addEventListener("mouseup", ()=>{isDragging=false;});
 canvas.addEventListener("mouseleave", ()=>{isDragging=false;});
-
-// ===== Touch Pan & Pinch =====
-canvas.addEventListener("touchstart", e=>{
-  if(e.touches.length===1){ isDragging=true; dragStartX=e.touches[0].clientX-offsetX; dragStartY=e.touches[0].clientY-offsetY; }
-  if(e.touches.length===2){
-    isDragging=false;
-    const dx=e.touches[0].clientX-e.touches[1].clientX;
-    const dy=e.touches[0].clientY-e.touches[1].clientY;
-    pinchStartDist=Math.hypot(dx,dy);
-    pinchStartScale=scale;
-  }
-});
-canvas.addEventListener("touchmove", e=>{
-  e.preventDefault();
-  if(e.touches.length===1 && isDragging){
-    offsetX=e.touches[0].clientX-dragStartX;
-    offsetY=e.touches[0].clientY-dragStartY;
-    drawGrid();
-  }
-  if(e.touches.length===2){
-    const dx=e.touches[0].clientX-e.touches[1].clientX;
-    const dy=e.touches[0].clientY-e.touches[1].clientY;
-    const dist=Math.hypot(dx,dy);
-    const rect = canvas.getBoundingClientRect();
-    const centerX = ((e.touches[0].clientX+e.touches[1].clientX)/2-rect.left-offsetX)/scale;
-    const centerY = ((e.touches[0].clientY+e.touches[1].clientY)/2-rect.top-offsetY)/scale;
-    zoomAt(centerX, centerY, dist/pinchStartDist*pinchStartScale/scale);
-  }
-});
-canvas.addEventListener("touchend", e=>{if(e.touches.length===0) isDragging=false; pinchStartDist=null;});
 
 // ===== Draw Pixel & Points =====
 canvas.addEventListener("click", e=>{
@@ -246,8 +213,19 @@ toggleSoundBtn.addEventListener("click",()=>{soundEnabled=!soundEnabled; toggleS
 
 // ===== Points Display =====
 function updatePointsDisplay(){
-  if(userPoints>0){ pointsDisplay.style.color="#0f0"; pointsDisplay.textContent=`${userPoints}/6`; }
-  else{ const now=Date.now(); const timeLeft=Math.max(0,Math.ceil((30000-(now-lastActionTime))/1000)); pointsDisplay.style.color="#f00"; pointsDisplay.textContent=`0/6 ${timeLeft}s`; }
+  if(userPoints>0){
+    pointsDisplay.classList.remove("red");
+    pointsDisplay.classList.add("green");
+    pointsDisplay.textContent=`${userPoints}/6`;
+    pointsDisplay.style.transform="scale(1.1)";
+    setTimeout(()=>pointsDisplay.style.transform="scale(1)",150);
+  } else {
+    pointsDisplay.classList.remove("green");
+    pointsDisplay.classList.add("red");
+    const now=Date.now();
+    const timeLeft=Math.max(0,Math.ceil((30000-(now-lastActionTime))/1000));
+    pointsDisplay.textContent=`0/6 ${timeLeft}s`;
+  }
 }
 setInterval(updatePointsDisplay,1000);
 setInterval(()=>{
