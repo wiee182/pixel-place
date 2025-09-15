@@ -1,40 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pixel Canvas</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixel Canvas</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Static dark background -->
-  <div id="background"></div>
 
-  <!-- Canvas container -->
-  <div id="canvas-container">
-    <canvas id="pixelCanvas" width="5000" height="5000"></canvas>
+<div id="background"></div>
+
+<div id="canvas-container">
+  <canvas id="pixelCanvas" width="5000" height="5000"></canvas>
+</div>
+
+<div id="bottom-left">
+  <div id="palette"></div>
+</div>
+
+<div id="chat-popup">
+  <div id="chat-buttons">
+    <button id="toggle-grid" class="small-btn">Grid</button>
+    <button id="toggle-chat" class="small-btn">Chat</button>
+    <button id="toggle-sound" class="small-btn">🔊</button>
+    <button id="points-display" class="small-btn green">6/6</button>
   </div>
-
-  <!-- Bottom left palette -->
-  <div id="bottom-left">
-    <div id="palette"></div>
+  <div id="chat-feed"></div>
+  <div id="chat-input">
+    <input type="text" id="chat-message" placeholder="Type a message...">
+    <button id="send-message">Send</button>
   </div>
+</div>
 
-  <!-- Floating chat popup -->
-  <div id="chat-popup" class="hidden">
-    <div id="chat-buttons">
-      <button id="toggle-grid" class="small-btn">Grid</button>
-      <button id="toggle-chat" class="small-btn">Chat</button>
-      <button id="toggle-sound" class="small-btn">🔊</button>
-      <button id="points-display" class="small-btn green">6/6</button>
-    </div>
-    <div id="chat-feed"></div>
-    <div id="chat-input">
-      <input type="text" id="chat-message" placeholder="Type a message...">
-      <button id="send-message">Send</button>
-    </div>
-  </div>
-
-  <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
