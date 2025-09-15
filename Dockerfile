@@ -1,16 +1,20 @@
-# Use Node.js
-FROM node:22
+# Use specific Node.js 22 LTS image with Debian base to avoid registry metadata issues
+FROM node:22-bullseye
 
-# Set app directory
+# Set working directory
 WORKDIR /app
 
-# Copy files
+# Copy package files
 COPY package*.json ./
-RUN npm install
+
+# Install dependencies
+RUN npm install --production
+
+# Copy the rest of the app
 COPY . .
 
-# Expose port
+# Expose app port (change if needed)
 EXPOSE 3000
 
-# Start server
+# Default command
 CMD ["node", "server.js"]
