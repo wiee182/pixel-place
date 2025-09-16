@@ -13,6 +13,7 @@ const ctx = canvas.getContext("2d");
 let scale = 1, offsetX = 0, offsetY = 0;
 let isDragging = false, dragStartX = 0, dragStartY = 0;
 let pinchStartDist = null, pinchStartScale = 1;
+
 let currentColor = "#fffefe";
 let showGrid = true;
 const chunks = new Map();
@@ -21,13 +22,15 @@ const chunks = new Map();
 const colors = [
   "#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100",
   "#382314","#7c3f20","#c16f36","#feac6d","#ffd3b0","#fea5d0",
-  "#f04eb4","#e872ff","#a631d3","#531c8d","#531c8d","#0335be",
-  "#149dfe","#8df4fe","#00bea5","#17777f","#044522","#18862f",
-  "#60e121","#b1ff37","#fffea4","#fce011","#fe9e17","#f66e08",
-  "#550123","#99011a","#f20e0c","#ff7872"
+  "#f04eb4","#e872ff","#a631d3","#531c8d","#0335be","#149dfe",
+  "#8df4fe","#00bea5","#17777f","#044522","#18862f","#60e121",
+  "#b1ff37","#fffea4","#fce011","#fe9e17","#f66e08","#550123",
+  "#99011a","#f20e0c","#ff7872"
 ];
 
 const paletteDiv = document.getElementById("palette");
+const moreBtn = document.getElementById("more-colors-btn");
+const morePopup = document.getElementById("more-colors-popup");
 const morePaletteDiv = document.getElementById("more-palette");
 const toggleGridBtn = document.getElementById("toggle-grid");
 const chatPopup = document.getElementById("chat-popup");
@@ -37,9 +40,6 @@ const chatInput = document.getElementById("chat-message");
 const sendBtn = document.getElementById("send-message");
 const pointsDisplay = document.getElementById("points-display");
 const toggleSoundBtn = document.getElementById("toggle-sound");
-const moreColorsBtn = document.getElementById("more-colors-btn");
-const moreColorsPopup = document.getElementById("more-colors-popup");
-const closeMoreColorsBtn = document.getElementById("close-more-colors");
 
 let userPoints = 6;
 let lastActionTime = Date.now();
@@ -131,7 +131,7 @@ function handleIncomingPixel(p){
   playSound(drawAudio);
 }
 
-// ===== Palette Initialization =====
+// ===== Palette =====
 colors.slice(0,6).forEach((c,i)=>{
   const sw = document.createElement("div");
   sw.className="color-swatch";
@@ -147,13 +147,13 @@ colors.slice(0,6).forEach((c,i)=>{
 });
 document.querySelector(".color-swatch").classList.add("selected");
 
-// Extra colors for popup
-colors.slice(6).forEach((c,i)=>{
+// ===== More Colors Popup =====
+colors.forEach((c,i)=>{
   const sw = document.createElement("div");
   sw.className="color-swatch";
   sw.style.background=c;
   sw.dataset.color=c;
-  sw.textContent=6+i;
+  sw.textContent=i;
   sw.addEventListener("click",()=>{
     document.querySelectorAll(".color-swatch").forEach(s=>s.classList.remove("selected"));
     sw.classList.add("selected");
@@ -161,15 +161,15 @@ colors.slice(6).forEach((c,i)=>{
   });
   morePaletteDiv.appendChild(sw);
 });
+moreBtn.addEventListener("click",()=>{ morePopup.classList.toggle("show"); });
 
-// ===== Toolbar =====
+// ===== Grid Toggle =====
 toggleGridBtn.addEventListener("click",()=>{
   showGrid=!showGrid;
   toggleGridBtn.style.background=showGrid?"#fff":"#333";
   toggleGridBtn.style.color=showGrid?"#000":"#fff";
   drawGrid();
 });
-toggleSoundBtn.addEventListener("click",()=>{soundEnabled=!soundEnabled; toggleSoundBtn.textContent=soundEnabled?"🔊":"🔇";});
 
 // ===== Zoom & Pan =====
 function zoomAt(cx,cy,zoomFactor){
@@ -186,10 +186,42 @@ canvas.addEventListener("wheel", e=>{
   zoomAt(mx,my,e.deltaY<0?1.1:0.9);
   drawGrid();
 });
+
+// Pan
 canvas.addEventListener("mousedown", e=>{isDragging=true; dragStartX=e.clientX-offsetX; dragStartY=e.clientY-offsetY;});
 canvas.addEventListener("mousemove", e=>{if(isDragging){offsetX=e.clientX-dragStartX; offsetY=e.clientY-dragStartY; drawGrid();}});
 canvas.addEventListener("mouseup", ()=>{isDragging=false;});
 canvas.addEventListener("mouseleave", ()=>{isDragging=false;});
+
+// Touch Pan & Pinch
+canvas.addEventListener("touchstart", e=>{
+  if(e.touches.length===1){ isDragging=true; dragStartX=e.touches[0].clientX-offsetX; dragStartY=e.touches[0].clientY-offsetY; }
+  if(e.touches.length===2){
+    isDragging=false;
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    pinchStartDist=Math.hypot(dx,dy);
+    pinchStartScale=scale;
+  }
+});
+canvas.addEventListener("touchmove", e=>{
+  e.preventDefault();
+  if(e.touches.length===1 && isDragging){
+    offsetX=e.touches[0].clientX-dragStartX;
+    offsetY=e.touches[0].clientY-dragStartY;
+    drawGrid();
+  }
+  if(e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    const dist=Math.hypot(dx,dy);
+    const rect = canvas.getBoundingClientRect();
+    const centerX = ((e.touches[0].clientX+e.touches[1].clientX)/2-rect.left-offsetX)/scale;
+    const centerY = ((e.touches[0].clientY+e.touches[1].clientY)/2-rect.top-offsetY)/scale;
+    zoomAt(centerX, centerY, dist/pinchStartDist*pinchStartScale/scale);
+  }
+});
+canvas.addEventListener("touchend", e=>{if(e.touches.length===0) isDragging=false; pinchStartDist=null;});
 
 // ===== Draw Pixel & Points =====
 canvas.addEventListener("click", e=>{
@@ -211,7 +243,7 @@ canvas.addEventListener("click", e=>{
   updatePointsDisplay();
 });
 
-// ===== Chat Functions =====
+// ===== Floating Chat =====
 function appendChat(message){
   const msg = document.createElement("div");
   msg.className="chat-msg"; msg.textContent=message;
@@ -227,11 +259,12 @@ function sendMessage(){
 }
 
 // ===== Chat Minimize =====
-chatMinimize.addEventListener("click", ()=> chatPopup.classList.toggle("minimized"));
+chatMinimize.addEventListener("click", ()=>{
+  chatPopup.classList.toggle("minimized");
+});
 
-// ===== More Colors Popup =====
-moreColorsBtn.addEventListener("click", ()=> moreColorsPopup.classList.toggle("show"));
-closeMoreColorsBtn.addEventListener("click", ()=> moreColorsPopup.classList.remove("show"));
+// ===== Toggle Sound =====
+toggleSoundBtn.addEventListener("click",()=>{soundEnabled=!soundEnabled; toggleSoundBtn.textContent=soundEnabled?"🔊":"🔇";});
 
 // ===== Points Display =====
 function updatePointsDisplay(){
