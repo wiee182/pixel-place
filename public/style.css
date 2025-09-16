@@ -1,4 +1,4 @@
-/* Body & Canvas */
+/* Main canvas styles */
 body {
   margin: 0;
   background: #111;
@@ -15,10 +15,9 @@ body {
   box-shadow: 0 25px 50px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.5);
   border-radius: 16px;
   cursor: crosshair;
-  transition: box-shadow 0.3s ease;
 }
 
-/* Bottom Bar */
+/* Bottom bar */
 #bottom-bar {
   position: fixed;
   bottom: 20px;
@@ -59,8 +58,8 @@ body {
 
 /* Main Color Cube */
 #palette .color-swatch {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
   cursor: pointer;
   position: relative;
@@ -78,24 +77,24 @@ body {
   box-shadow: 0 0 10px rgba(0,170,255,0.5), 0 0 20px rgba(0,255,170,0.3);
 }
 
-/* Points number inside cube */
+/* Points inside main cube */
 #points-display {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%,-50%);
+  transform: translate(-50%, -50%);
   font-size: 14px;
   font-weight: bold;
   color: #000;
 }
 
-/* Cooldown cube border */
+/* Cooldown border cube */
 #cooldown-ring {
   position: absolute;
   top: -3px;
   left: -3px;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border: 2px solid #00ffff;
   box-sizing: border-box;
   pointer-events: none;
@@ -103,11 +102,12 @@ body {
   transform-origin: center;
 }
 
-/* Popup Colors */
+/* Popup colors above bottom bar */
 #more-colors-popup {
   position: absolute;
-  bottom: 45px;
-  left: 0;
+  bottom: 50px; /* above bar */
+  left: 50%;
+  transform: translateX(-50%);
   max-height: 180px;
   width: 210px;
   overflow-y: auto;
@@ -119,18 +119,16 @@ body {
   border-radius: 12px;
   box-shadow: 0 8px 20px rgba(0,0,0,0.5);
   opacity: 0;
-  transform: translateY(8px);
-  transition: all 0.25s ease;
   pointer-events: none;
+  transition: all 0.25s ease;
   z-index: 15;
 }
 #more-colors-popup.show {
   opacity: 1;
-  transform: translateY(0);
   pointer-events: auto;
 }
 
-/* Chat Box */
+/* Chat box */
 #chat-box {
   position: fixed;
   right: 20px;
