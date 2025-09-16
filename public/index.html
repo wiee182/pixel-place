@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Collaborative Canvas</title>
+  <title>Collaborative Pixel Canvas</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -19,7 +19,11 @@
       <span id="points-display">6/6</span>
     </div>
 
-    <div id="palette"></div>
+    <div id="palette-container" style="position: relative;">
+      <div id="palette"></div>
+      <div id="more-colors-popup"></div>
+    </div>
+
     <button id="more-colors">+</button>
     <button id="toggle-grid">Grid</button>
     <button id="toggle-sound">Sound</button>
