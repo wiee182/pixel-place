@@ -17,9 +17,9 @@ body, html { height:100%; overflow:hidden; font-family:Arial,sans-serif; backgro
 }
 
 /* Palette container */
-#palette-container { display:flex; align-items:center; gap:10px; overflow-x:auto; }
+#palette-container { display:flex; align-items:center; gap:10px; overflow-x:auto; overflow-y:hidden; }
 #palette { display:flex; gap:4px; }
-.color-swatch { width:32px; height:32px; border:2px solid #444; border-radius:4px; cursor:pointer; text-align:center; line-height:32px; font-size:12px; color:#fff; user-select:none; }
+.color-swatch { width:32px; height:32px; border:2px solid #444; border-radius:4px; cursor:pointer; text-align:center; line-height:32px; font-size:12px; color:#fff; user-select:none; flex-shrink:0; }
 .color-swatch.selected { border:2px solid #fff; }
 
 /* Points display */
@@ -37,6 +37,8 @@ body, html { height:100%; overflow:hidden; font-family:Arial,sans-serif; backgro
   display:flex; flex-direction:column; overflow:hidden; font-family:Arial,sans-serif; z-index:10;
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
+#chat-popup.hidden { transform: translateY(100px); opacity:0; pointer-events:none; }
+
 .chat-header { display:flex; justify-content:center; align-items:center; padding:8px 12px; background: rgba(34,34,34,0.5); font-weight:bold; color:#fff; cursor:pointer; }
 #chat-feed { flex:1; padding:8px; overflow-y:auto; color:#fff; }
 .chat-msg { margin-bottom:6px; padding:6px 8px; background: rgba(68,68,68,0.3); border-radius:8px; word-wrap:break-word; font-size:14px; color:#fff; }
@@ -44,11 +46,3 @@ body, html { height:100%; overflow:hidden; font-family:Arial,sans-serif; backgro
 .chat-input input { flex:1; padding:6px 8px; border-radius:6px; border:none; background: rgba(17,17,17,0.5); color:#fff; font-size:14px; }
 .chat-input button { padding:6px 12px; border:none; border-radius:6px; background:#555; color:white; cursor:pointer; font-size:14px; }
 .chat-input button:hover { background:#777; }
-
-/* Chat minimized */
-#chat-popup.minimized #chat-feed,
-#chat-popup.minimized .chat-input { display:none; }
-
-/* Palette scroll invisible but scrollable */
-#palette-container::-webkit-scrollbar { display:none; }
-#palette-container { -ms-overflow-style:none; scrollbar-width:none; }
