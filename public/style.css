@@ -17,8 +17,29 @@ body, html { height:100%; overflow:hidden; font-family:Arial,sans-serif; backgro
   background: rgba(30,30,30,0.8); backdrop-filter: blur(12px);
   border-radius: 16px; display:flex; flex-direction:column;
   overflow:hidden; z-index:20; box-shadow:0 4px 20px rgba(0,0,0,0.5);
+  transition: height 0.3s ease;
 }
-#chat-header { text-align:center; padding:10px; font-weight:bold; color:#fff; background:rgba(255,255,255,0.1); }
+#chat-header { 
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px; font-weight:bold; color:#fff; 
+  background:rgba(255,255,255,0.1);
+}
+#chat-header button {
+  background:none; border:none; color:#fff; font-size:14px;
+  cursor:pointer; transition:transform 0.2s;
+}
+#chat-header button:hover { transform:scale(1.2); }
+
+/* Minimized state */
+#chat-popup.minimized {
+  height:40px;
+  max-height:40px;
+}
+#chat-popup.minimized #chat-feed,
+#chat-popup.minimized .chat-input {
+  display:none;
+}
+
 #chat-feed { flex:1; padding:10px; overflow-y:auto; color:#fff; font-size:14px; }
 .chat-msg { margin-bottom:8px; padding:8px 12px; background: rgba(255,255,255,0.1); border-radius:12px; word-wrap:break-word; font-size:14px; }
 .chat-input { display:flex; padding:10px; gap:8px; border-top:1px solid rgba(255,255,255,0.1); }

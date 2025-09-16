@@ -13,27 +13,38 @@ let currentColor = "#fffefe";
 let showGrid = true;
 const chunks = new Map();
 
-// ===== Palette & Points =====
-const colors = ["#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100"];
-const paletteDiv = document.getElementById("palette");
-const moreColorsPopup = document.getElementById("more-colors-popup");
-const moreBtn = document.getElementById("more-colors");
-const pointsDisplay = document.getElementById("points-display");
-
+let userPoints = 6;
 let soundEnabled = true;
-let myPoints = 6;
 
-// ===== Audio =====
-const drawAudio = new Audio('sounds/draw.mp3'); drawAudio.volume=0.2;
-const pointAudio = new Audio('sounds/point.mp3'); pointAudio.volume=0.3;
-function playSound(audio){ if(!soundEnabled) return; audio.cloneNode().play(); }
+// ===== WebSocket =====
+const ws = new WebSocket(window.location.origin.replace(/^http/,"ws"));
 
-// ===== Chat =====
-const chatPopup = document.getElementById("chat-popup");
-const chatToggle = document.getElementById("chat-toggle");
-const chatFeed = document.getElementById("chat-feed");
-const chatInput = document.getElementById("chat-message");
-const sendBtn = document.getElementById("send-message");
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+
+  if (data.type === "init") {
+    // Load chat
+    data.chat.forEach(msg => addChatMessage(msg.text));
+    // Load pixels
+    data.chunks.forEach(([key, pixels]) => {
+      chunks.set(key, pixels);
+    });
+    drawGrid();
+  }
+
+  if (data.type === "draw") {
+    const key = `${Math.floor(data.x/100)},${Math.floor(data.y/100)}`;
+    if (!chunks.has(key)) chunks.set(key, []);
+    const chunk = chunks.get(key);
+    const idx = chunk.findIndex(p=>p.x===data.x && p.y===data.y);
+    if(idx>=0) chunk[idx]=data; else chunk.push(data);
+    drawGrid();
+  }
+
+  if (data.type === "chat") {
+    addChatMessage(data.text);
+  }
+};
 
 // ===== Resize =====
 function resizeCanvas(){
@@ -52,15 +63,7 @@ function drawGrid(){
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  // white world with glow
-  ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.6)";
-  ctx.shadowBlur = 40;
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0,0,WORLD_WIDTH,WORLD_HEIGHT);
-  ctx.restore();
-
-  // draw pixels
+  // draw existing pixels
   chunks.forEach(chunk=>{
     chunk.forEach(p=>{
       ctx.fillStyle=p.color;
@@ -84,6 +87,8 @@ function drawGrid(){
 }
 
 // ===== Palette =====
+const colors = ["#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100"];
+const paletteDiv = document.getElementById("palette");
 colors.forEach((c,i)=>{
   const sw = document.createElement("div");
   sw.className="color-swatch";
@@ -105,69 +110,10 @@ document.getElementById("toggle-grid").addEventListener("click", ()=>{
   drawGrid();
 });
 
-// ===== Chat Toggle =====
-chatToggle.addEventListener("click", ()=>{
-  chatPopup.classList.toggle("minimized");
+// ===== Sound Toggle =====
+document.getElementById("toggle-sound").addEventListener("click", ()=>{
+  soundEnabled = !soundEnabled;
 });
-
-// ===== More Colors =====
-moreBtn.addEventListener("click", ()=>{
-  moreColorsPopup.classList.toggle("hidden");
-});
-
-// ===== WebSocket =====
-const ws = new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host);
-
-ws.addEventListener("message", e=>{
-  const data = JSON.parse(e.data);
-
-  if(data.type === "init"){
-    // load pixels
-    (data.pixels||[]).forEach(p=>addPixel(p.x,p.y,p.color));
-    // load chat
-    (data.chat||[]).forEach(msg=>addChatMessage(msg.text));
-    myPoints = data.points || 6;
-    updatePoints();
-    drawGrid();
-  }
-
-  if(data.type === "draw"){
-    addPixel(data.x,data.y,data.color);
-    drawGrid();
-  }
-
-  if(data.type === "chat"){
-    addChatMessage(data.text);
-  }
-
-  if(data.type === "points"){
-    myPoints = data.points;
-    updatePoints();
-  }
-});
-
-// ===== Helpers =====
-function addPixel(x,y,color){
-  const key = `${Math.floor(x/100)},${Math.floor(y/100)}`;
-  if(!chunks.has(key)) chunks.set(key,[]);
-  const chunk = chunks.get(key);
-  const idx = chunk.findIndex(p=>p.x===x && p.y===y);
-  if(idx>=0) chunk[idx].color=color;
-  else chunk.push({x,y,color});
-}
-
-function addChatMessage(text){
-  const msg = document.createElement("div");
-  msg.className="chat-msg";
-  msg.textContent=text;
-  chatFeed.appendChild(msg);
-  chatFeed.scrollTop = chatFeed.scrollHeight;
-}
-
-function updatePoints(){
-  pointsDisplay.textContent = `${myPoints}/6`;
-  pointsDisplay.style.color = myPoints>0 ? "#0f0" : "#f33";
-}
 
 // ===== Draw Pixel =====
 canvas.addEventListener("click", e=>{
@@ -179,8 +125,7 @@ canvas.addEventListener("click", e=>{
   const x = Math.max(0, Math.min(WORLD_WIDTH-GRID_SIZE, Math.floor(worldX/GRID_SIZE)*GRID_SIZE));
   const y = Math.max(0, Math.min(WORLD_HEIGHT-GRID_SIZE, Math.floor(worldY/GRID_SIZE)*GRID_SIZE));
 
-  ws.send(JSON.stringify({ type:"draw", x,y,color:currentColor,size:GRID_SIZE }));
-  playSound(drawAudio);
+  ws.send(JSON.stringify({type:"draw", x,y,color:currentColor}));
 });
 
 // ===== Pan =====
@@ -203,14 +148,32 @@ canvas.addEventListener("wheel", e=>{
   drawGrid();
 });
 
-// ===== Chat Send =====
+// ===== Chat =====
+const chatPopup = document.getElementById("chat-popup");
+const chatToggle = document.getElementById("chat-toggle");
+const chatFeed = document.getElementById("chat-feed");
+const chatInput = document.getElementById("chat-message");
+const sendBtn = document.getElementById("send-message");
+
+chatToggle.addEventListener("click", () => {
+  chatPopup.classList.toggle("minimized");
+  chatToggle.textContent = chatPopup.classList.contains("minimized") ? "▲" : "▼";
+});
+
 sendBtn.addEventListener("click", sendMessage);
 chatInput.addEventListener("keydown", e=>{if(e.key==="Enter"){sendMessage(); e.preventDefault();}});
 function sendMessage(){
   const text = chatInput.value.trim();
   if(!text) return;
-  ws.send(JSON.stringify({ type:"chat", text }));
+  ws.send(JSON.stringify({type:"chat", text}));
   chatInput.value='';
+}
+function addChatMessage(text){
+  const msg = document.createElement("div");
+  msg.className="chat-msg";
+  msg.textContent=text;
+  chatFeed.appendChild(msg);
+  chatFeed.scrollTop = chatFeed.scrollHeight;
 }
 
 // ===== Animate =====
