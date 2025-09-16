@@ -2,47 +2,36 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pixel Place</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collaborative Canvas</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- ===== Canvas ===== -->
-  <div id="canvas-container">
-    <canvas id="pixelCanvas"></canvas>
-  </div>
+  <canvas id="pixelCanvas"></canvas>
 
-  <!-- ===== Chat ===== -->
-  <div id="chat-popup">
-    <div id="chat-header">
-      <span id="chat-toggle">Chat</span>
-    </div>
-    <div id="chat-feed"></div>
-    <div id="chat-input-container">
-      <input type="text" id="chat-message" placeholder="Type a message...">
-      <button id="send-message">Send</button>
-    </div>
-  </div>
-
-  <!-- ===== Bottom Toolbar ===== -->
+  <!-- Bottom Bar -->
   <div id="bottom-bar">
-    <!-- Points Progress -->
-    <div id="points-wrapper">
-      <svg id="points-ring" width="60" height="60">
-        <circle class="bg" cx="30" cy="30" r="25" />
-        <circle class="progress" cx="30" cy="30" r="25" />
+    <div id="points-container">
+      <svg id="cooldown-ring" width="40" height="40">
+        <circle id="ring-bg" cx="20" cy="20" r="18"/>
+        <circle id="ring-progress" cx="20" cy="20" r="18"/>
       </svg>
       <span id="points-display">6/6</span>
     </div>
 
-    <!-- Palette -->
     <div id="palette"></div>
     <button id="more-colors">+</button>
-    <div id="more-colors-popup" class="hidden"></div>
+    <button id="toggle-grid">Grid</button>
+    <button id="toggle-sound">Sound</button>
+  </div>
 
-    <!-- Controls -->
-    <div id="controls">
-      <button id="toggle-grid">Grid</button>
-      <button id="toggle-sound">Sound</button>
+  <!-- Chat -->
+  <div id="chat-box">
+    <div id="chat-header">Chat</div>
+    <div id="chat-feed"></div>
+    <div id="chat-input-container">
+      <input type="text" id="chat-message" placeholder="Type a message...">
+      <button id="send-message">Send</button>
     </div>
   </div>
 

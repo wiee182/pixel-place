@@ -1,15 +1,13 @@
-# Use stable Node.js 20 LTS
 FROM node:20-bullseye
 
 WORKDIR /app
 
-# Copy package files first
-COPY package*.json ./
+# Install build tools for better-sqlite3
+RUN apt-get update && apt-get install -y python3 g++ make
 
-# Install all deps (not just production, since you need better-sqlite3)
+COPY package*.json ./
 RUN npm install
 
-# Copy the rest of the app
 COPY . .
 
 EXPOSE 3000
