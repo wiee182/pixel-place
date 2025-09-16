@@ -1,22 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pixel Canvas</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixel Canvas</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="canvas-container">
-    <canvas id="bgCanvas"></canvas>
     <canvas id="pixelCanvas"></canvas>
   </div>
 
   <!-- Floating Chat -->
   <div id="chat-popup">
-    <div class="chat-header">
-      <span id="chat-minimize">Chat</span>
-    </div>
+    <div class="chat-header" id="chat-toggle">Chat</div>
     <div id="chat-feed"></div>
     <div class="chat-input">
       <input type="text" id="chat-message" placeholder="Type a message...">
@@ -28,8 +25,7 @@
   <div id="bottom-bar">
     <div id="palette-container">
       <div id="palette"></div>
-      <button id="more-btn">More</button>
-      <div id="more-colors-popup" class="hidden"></div>
+      <button id="more-colors">More</button>
       <div id="points-display">6/6</div>
     </div>
     <div id="toolbar">
@@ -37,6 +33,9 @@
       <button class="tool-btn" id="toggle-sound">🔊</button>
     </div>
   </div>
+
+  <!-- More Colors Popup -->
+  <div id="more-colors-popup" class="hidden"></div>
 
   <script src="script.js"></script>
 </body>
