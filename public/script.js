@@ -20,7 +20,7 @@ const moreColorsPopup = document.getElementById("more-colors-popup");
 const moreBtn = document.getElementById("more-colors");
 const pointsDisplay = document.getElementById("points-display");
 
-let userPoints = 6;
+let userPoints = 6, lastActionTime = Date.now();
 let soundEnabled = true;
 
 // ===== Audio =====
@@ -52,6 +52,17 @@ function drawGrid(){
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
+  // White world block with shadow
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.6)";
+  ctx.shadowBlur = 40;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+  ctx.restore();
+
+  // Draw existing pixels
   chunks.forEach(chunk=>{
     chunk.forEach(p=>{
       ctx.fillStyle=p.color;
@@ -59,6 +70,7 @@ function drawGrid(){
     });
   });
 
+  // Grid lines
   if(showGrid){
     ctx.strokeStyle="#000";
     ctx.lineWidth=1/scale;
@@ -79,7 +91,6 @@ colors.forEach((c,i)=>{
   sw.className="color-swatch";
   sw.style.background=c;
   sw.dataset.color=c;
-  sw.textContent=i;
   sw.addEventListener("click",()=>{
     document.querySelectorAll(".color-swatch").forEach(s=>s.classList.remove("selected"));
     sw.classList.add("selected");
@@ -96,19 +107,16 @@ document.getElementById("toggle-grid").addEventListener("click", ()=>{
 });
 
 // ===== Sound Toggle =====
-document.getElementById("toggle-sound").addEventListener("click", ()=>{
+document.getElementById("toggle-sound").addEventListener("click", e=>{
   soundEnabled = !soundEnabled;
-  document.getElementById("toggle-sound").innerHTML = soundEnabled
-    ? '<i class="fas fa-volume-up"></i>'
-    : '<i class="fas fa-volume-mute"></i>';
+  e.currentTarget.innerHTML = soundEnabled 
+    ? '<i class="fa-solid fa-volume-high"></i>'
+    : '<i class="fa-solid fa-volume-xmark"></i>';
 });
 
 // ===== Chat Toggle =====
 chatToggle.addEventListener("click", ()=>{
   chatPopup.classList.toggle("minimized");
-  chatToggle.innerHTML = chatPopup.classList.contains("minimized")
-    ? '<i class="fas fa-chevron-up"></i>'
-    : '<i class="fas fa-chevron-down"></i>';
 });
 
 // ===== More Colors =====
@@ -135,8 +143,18 @@ canvas.addEventListener("click", e=>{
 });
 
 // ===== Pan =====
-canvas.addEventListener("mousedown", e=>{isDragging=true; dragStartX=e.clientX-offsetX; dragStartY=e.clientY-offsetY;});
-canvas.addEventListener("mousemove", e=>{if(isDragging){offsetX=e.clientX-dragStartX; offsetY=e.clientY-dragStartY; drawGrid();}});
+canvas.addEventListener("mousedown", e=>{
+  isDragging=true; 
+  dragStartX=e.clientX-offsetX; 
+  dragStartY=e.clientY-offsetY;
+});
+canvas.addEventListener("mousemove", e=>{
+  if(isDragging){
+    offsetX=e.clientX-dragStartX; 
+    offsetY=e.clientY-dragStartY; 
+    drawGrid();
+  }
+});
 canvas.addEventListener("mouseup", ()=>{isDragging=false;});
 canvas.addEventListener("mouseleave", ()=>{isDragging=false;});
 
@@ -156,7 +174,9 @@ canvas.addEventListener("wheel", e=>{
 
 // ===== Chat Send =====
 sendBtn.addEventListener("click", sendMessage);
-chatInput.addEventListener("keydown", e=>{if(e.key==="Enter"){sendMessage(); e.preventDefault();}});
+chatInput.addEventListener("keydown", e=>{
+  if(e.key==="Enter"){sendMessage(); e.preventDefault();}
+});
 function sendMessage(){
   const text = chatInput.value.trim();
   if(!text) return;
