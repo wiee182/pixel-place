@@ -1,53 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pixel Canvas</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Canvas Background -->
   <div id="page-bg"></div>
 
+  <!-- Canvas -->
   <div id="canvas-container">
     <canvas id="pixelCanvas"></canvas>
   </div>
 
   <!-- Chat -->
-  <div id="chat-popup" class="minimized" aria-hidden="false">
-    <div id="chat-header" role="button" tabindex="0">
-      <span id="chat-title">Chat</span>
-    </div>
-    <div id="chat-feed" aria-live="polite"></div>
+  <div id="chat-popup" class="minimized">
+    <div id="chat-toggle">Chat</div>
+    <div id="chat-feed"></div>
     <div class="chat-input">
-      <input id="chat-message" type="text" placeholder="Type a message..." />
-      <button id="send-message" aria-label="Send">Send</button>
+      <input type="text" id="chat-message" placeholder="Type a message...">
+      <button id="send-message">Send</button>
     </div>
   </div>
 
-  <!-- Bottom bar (flat, centered) -->
-  <div id="bottom-bar" role="toolbar" aria-label="controls">
+  <!-- Bottom Bar -->
+  <div id="bottom-bar">
     <div id="palette-container">
-      <div id="palette" aria-hidden="false"></div>
-      <button id="more-colors-btn" class="tool-btn" title="More colors">＋</button>
+      <div id="palette"></div>
+      <button id="more-colors">＋</button>
     </div>
 
-    <div id="middle-controls">
-      <div id="points-display" aria-live="polite">1/1</div>
+    <!-- Points with progress ring -->
+    <div id="points-container">
+      <svg class="progress-ring" width="50" height="50">
+        <circle class="progress-ring__bg" r="22" cx="25" cy="25"/>
+        <circle class="progress-ring__progress" r="22" cx="25" cy="25"/>
+      </svg>
+      <div id="points-display">6/6</div>
     </div>
 
-    <div id="right-controls">
-      <button id="toggle-grid" class="tool-btn" title="Toggle grid">Grid</button>
-      <button id="toggle-sound" class="tool-btn" title="Toggle sound">🔊</button>
+    <div id="toolbar">
+      <button class="tool-btn" id="toggle-grid">Grid</button>
+      <button class="tool-btn" id="toggle-sound">🔊</button>
     </div>
   </div>
 
-  <!-- More colors popup -->
-  <div id="more-colors" class="popup hidden" aria-hidden="true">
-    <div class="popup-header">More colors</div>
-    <div id="more-palette" class="more-palette"></div>
-  </div>
+  <!-- More Colors Popup -->
+  <div id="more-colors-popup" class="hidden"></div>
 
-  <script src="script.js" defer></script>
+  <script src="script.js"></script>
 </body>
 </html>
