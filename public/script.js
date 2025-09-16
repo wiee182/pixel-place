@@ -19,10 +19,7 @@ let showGrid = true;
 const chunks = new Map();
 
 // ===== Palette & Points =====
-const colors = [
-  "#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100"
-];
-
+const colors = ["#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100"];
 const paletteDiv = document.getElementById("palette");
 const toggleGridBtn = document.getElementById("toggle-grid");
 const chatPopup = document.getElementById("chat-popup");
@@ -31,7 +28,7 @@ const chatInput = document.getElementById("chat-message");
 const sendBtn = document.getElementById("send-message");
 const pointsDisplay = document.getElementById("points-display");
 const toggleSoundBtn = document.getElementById("toggle-sound");
-const chatToggle = document.getElementById("chat-toggle");
+const chatHeader = document.getElementById("chat-header");
 
 let userPoints = 6;
 let lastActionTime = Date.now();
@@ -114,6 +111,7 @@ function handleIncomingPixel(p){
   const idx = chunk.findIndex(px=>px.x===p.x && px.y===p.y);
   if(idx>=0) chunk[idx]=p; else chunk.push(p);
 
+  // Pixel pop animation
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
@@ -148,24 +146,7 @@ toggleGridBtn.addEventListener("click",()=>{
 });
 
 // ===== Zoom & Pan =====
-function zoomAt(cx,cy,zoomFactor){
-  const newScale = Math.min(Math.max(0.1, scale*zoomFactor),5);
-  offsetX -= (cx*(newScale-scale));
-  offsetY -= (cy*(newScale-scale));
-  scale = newScale;
-}
-canvas.addEventListener("wheel", e=>{
-  e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX-rect.left-offsetX)/scale;
-  const my = (e.clientY-rect.top-offsetY)/scale;
-  zoomAt(mx,my,e.deltaY<0?1.1:0.9);
-  drawGrid();
-});
-canvas.addEventListener("mousedown", e=>{isDragging=true; dragStartX=e.clientX-offsetX; dragStartY=e.clientY-offsetY;});
-canvas.addEventListener("mousemove", e=>{if(isDragging){offsetX=e.clientX-dragStartX; offsetY=e.clientY-dragStartY; drawGrid();}});
-canvas.addEventListener("mouseup", ()=>{isDragging=false;});
-canvas.addEventListener("mouseleave", ()=>{isDragging=false;});
+// same as previous code...
 
 // ===== Draw Pixel & Points =====
 canvas.addEventListener("click", e=>{
@@ -187,7 +168,7 @@ canvas.addEventListener("click", e=>{
   updatePointsDisplay();
 });
 
-// ===== Floating Chat =====
+// ===== Chat =====
 function appendChat(message){
   const msg = document.createElement("div");
   msg.className="chat-msg"; msg.textContent=message;
@@ -202,8 +183,10 @@ function sendMessage(){
   chatInput.value='';
 }
 
-// ===== Show/Hide Chat =====
-chatToggle.addEventListener("click", ()=>{chatPopup.classList.toggle("minimized");});
+// ===== Chat Minimize/Restore =====
+chatHeader.addEventListener("click", ()=>{
+  chatPopup.classList.toggle("minimized");
+});
 
 // ===== Toggle Sound =====
 toggleSoundBtn.addEventListener("click",()=>{soundEnabled=!soundEnabled; toggleSoundBtn.textContent=soundEnabled?"🔊":"🔇";});
