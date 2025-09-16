@@ -12,17 +12,13 @@ const ctx = canvas.getContext("2d");
 
 let scale = 1, offsetX = 0, offsetY = 0;
 let isDragging = false, dragStartX = 0, dragStartY = 0;
-let pinchStartDist = null, pinchStartScale = 1;
 
 let currentColor = "#fffefe";
 let showGrid = true;
 const chunks = new Map();
 
 // ===== Palette & Points =====
-const colors = [
-  "#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100"
-];
-
+const colors = ["#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100"];
 const paletteDiv = document.getElementById("palette");
 const toggleGridBtn = document.getElementById("toggle-grid");
 const chatPopup = document.getElementById("chat-popup");
@@ -205,7 +201,9 @@ function sendMessage(){
 }
 
 // ===== Show/Hide Chat =====
-chatToggle.addEventListener("click",()=>{chatPopup.classList.toggle("hidden");});
+chatToggle.addEventListener("click",()=>{
+  chatPopup.classList.toggle("hidden");
+});
 
 // ===== Toggle Sound =====
 toggleSoundBtn.addEventListener("click",()=>{soundEnabled=!soundEnabled; toggleSoundBtn.textContent=soundEnabled?"🔊":"🔇";});
