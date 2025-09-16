@@ -1,52 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
   <title>Pixel Canvas</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Page background -->
   <div id="page-bg"></div>
 
-  <!-- Canvas -->
   <div id="canvas-container">
     <canvas id="pixelCanvas"></canvas>
   </div>
 
-  <!-- Floating Chat -->
+  <!-- Chat -->
   <div id="chat-popup" class="minimized">
-    <div id="chat-header">
-      <span>Chat</span>
-      <button id="chat-toggle">▲</button>
+    <div id="chat-header" role="button" tabindex="0">
+      <span id="chat-title">Chat</span>
     </div>
-    <div id="chat-feed"></div>
+    <div id="chat-feed" aria-live="polite"></div>
     <div class="chat-input">
-      <input type="text" id="chat-message" placeholder="Type a message...">
-      <button id="send-message">Send</button>
+      <input id="chat-message" type="text" placeholder="Type a message..." />
+      <button id="send-message" aria-label="Send message">Send</button>
     </div>
   </div>
 
-  <!-- Bottom Toolbar -->
-  <div id="bottom-bar">
+  <!-- Bottom control bar (centered floating) -->
+  <div id="bottom-bar" role="toolbar" aria-label="Controls">
     <div id="palette-container">
-      <div id="palette"></div>
-      <button id="color-popup-btn">🎨</button>
-      <div id="points-display">6/6</div>
+      <div id="palette" aria-hidden="false"></div>
+      <button id="color-popup-btn" class="tool-btn" title="More colors">🎨</button>
+      <div id="points-display" aria-live="polite">6/6</div>
     </div>
+
     <div id="toolbar">
-      <button class="tool-btn" id="toggle-grid">Grid</button>
-      <button class="tool-btn" id="toggle-sound">🔊</button>
+      <button id="toggle-grid" class="tool-btn" title="Toggle grid">Grid</button>
+      <button id="toggle-sound" class="tool-btn" title="Toggle sound">🔊</button>
     </div>
   </div>
 
-  <!-- Color Popup -->
-  <div id="color-popup" class="hidden">
-    <h3>More Colors</h3>
+  <!-- Color popup anchored to bottom bar -->
+  <div id="color-popup" class="hidden" aria-hidden="true">
+    <h4>More Colors</h4>
     <div id="extra-palette"></div>
   </div>
 
-  <script src="script.js"></script>
+  <script src="script.js" defer></script>
 </body>
 </html>
