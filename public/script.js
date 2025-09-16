@@ -21,11 +21,6 @@ const chunks = new Map();
 // ===== Palette & Points =====
 const colors = [
   "#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100",
-  "#382314","#7c3f20","#c16f36","#feac6d","#ffd3b0","#fea5d0",
-  "#f04eb4","#e872ff","#a631d3","#531c8d","#531c8d","#0335be",
-  "#149dfe","#8df4fe","#00bea5","#17777f","#044522","#18862f",
-  "#60e121","#b1ff37","#fffea4","#fce011","#fe9e17","#f66e08",
-  "#550123","#99011a","#f20e0c","#ff7872"
 ];
 
 const paletteDiv = document.getElementById("palette");
@@ -36,6 +31,7 @@ const chatInput = document.getElementById("chat-message");
 const sendBtn = document.getElementById("send-message");
 const pointsDisplay = document.getElementById("points-display");
 const toggleSoundBtn = document.getElementById("toggle-sound");
+const chatToggle = document.getElementById("chat-toggle");
 
 let userPoints = 6;
 let lastActionTime = Date.now();
@@ -118,6 +114,7 @@ function handleIncomingPixel(p){
   const idx = chunk.findIndex(px=>px.x===p.x && px.y===p.y);
   if(idx>=0) chunk[idx]=p; else chunk.push(p);
 
+  // Pixel pop animation
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
@@ -134,7 +131,7 @@ colors.forEach((c,i)=>{
   sw.style.background=c;
   sw.dataset.color=c;
   sw.textContent=i;
-  sw.addEventListener("click",()=>{
+  sw.addEventListener("click", ()=>{
     document.querySelectorAll(".color-swatch").forEach(s=>s.classList.remove("selected"));
     sw.classList.add("selected");
     currentColor=c;
@@ -166,6 +163,8 @@ canvas.addEventListener("wheel", e=>{
   zoomAt(mx,my,e.deltaY<0?1.1:0.9);
   drawGrid();
 });
+
+// Pan
 canvas.addEventListener("mousedown", e=>{isDragging=true; dragStartX=e.clientX-offsetX; dragStartY=e.clientY-offsetY;});
 canvas.addEventListener("mousemove", e=>{if(isDragging){offsetX=e.clientX-dragStartX; offsetY=e.clientY-dragStartY; drawGrid();}});
 canvas.addEventListener("mouseup", ()=>{isDragging=false;});
@@ -206,9 +205,10 @@ function sendMessage(){
   chatInput.value='';
 }
 
-// ===== Show/Hide Chat via "Chat" label =====
-const chatLabel = document.querySelector(".chat-header span");
-chatLabel.addEventListener("click",()=>{ chatPopup.classList.toggle("hidden"); });
+// ===== Chat toggle =====
+chatToggle.addEventListener("click", ()=>{
+  chatPopup.classList.toggle("hidden");
+});
 
 // ===== Toggle Sound =====
 toggleSoundBtn.addEventListener("click",()=>{soundEnabled=!soundEnabled; toggleSoundBtn.textContent=soundEnabled?"🔊":"🔇";});
@@ -216,11 +216,7 @@ toggleSoundBtn.addEventListener("click",()=>{soundEnabled=!soundEnabled; toggleS
 // ===== Points Display =====
 function updatePointsDisplay(){
   if(userPoints>0){ pointsDisplay.style.color="#0f0"; pointsDisplay.textContent=`${userPoints}/6`; }
-  else{
-    const now=Date.now();
-    const timeLeft=Math.max(0,Math.ceil((20000-(now-lastActionTime))/1000));
-    pointsDisplay.style.color="#f00"; pointsDisplay.textContent=`0/6 ${timeLeft}s`;
-  }
+  else{ const now=Date.now(); const timeLeft=Math.max(0,Math.ceil((20000-(now-lastActionTime))/1000)); pointsDisplay.style.color="#f00"; pointsDisplay.textContent=`0/6 ${timeLeft}s`; }
 }
 setInterval(updatePointsDisplay,1000);
 setInterval(()=>{

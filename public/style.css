@@ -18,8 +18,8 @@ body, html { height:100%; overflow:hidden; font-family:Arial,sans-serif; backgro
 
 /* Palette container */
 #palette-container { display:flex; align-items:center; gap:10px; overflow-x:auto; overflow-y:hidden; }
-#palette { display:flex; gap:4px; }
-.color-swatch { width:32px; height:32px; border:2px solid #444; border-radius:4px; cursor:pointer; text-align:center; line-height:32px; font-size:12px; color:#fff; user-select:none; flex-shrink:0; }
+#palette { display:flex; gap:4px; min-width:0; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; }
+.color-swatch { width:40px; height:40px; border:2px solid #444; border-radius:4px; cursor:pointer; text-align:center; line-height:40px; font-size:14px; color:#fff; user-select:none; flex-shrink:0; }
 .color-swatch.selected { border:2px solid #fff; }
 
 /* Points display */
