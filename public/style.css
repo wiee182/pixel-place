@@ -1,59 +1,39 @@
-/* Reset */
-* { margin:0; padding:0; box-sizing:border-box; }
-body, html { height:100%; overflow:hidden; font-family:Arial,sans-serif; background:#000; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel Canvas</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="canvas-container">
+    <canvas id="bgCanvas"></canvas>
+    <canvas id="pixelCanvas"></canvas>
+  </div>
 
-/* Canvas */
-#canvas-container { position:relative; width:100%; height:100%; overflow:hidden; }
-#bgCanvas, #pixelCanvas { position:absolute; top:0; left:0; width:100%; height:100%; image-rendering:pixelated; }
-#bgCanvas { background:#000; }
-#pixelCanvas { background:#000; cursor:crosshair; }
+  <!-- Floating Chat -->
+  <div id="chat-popup">
+    <div class="chat-header" id="chat-toggle">Chat</div>
+    <div id="chat-feed"></div>
+    <div class="chat-input">
+      <input type="text" id="chat-message" placeholder="Type a message...">
+      <button id="send-message">Send</button>
+    </div>
+  </div>
 
-/* Bottom Toolbar */
-#bottom-bar {
-  position:absolute; bottom:0; left:0; right:0;
-  background: rgba(20,20,20,0.95);
-  display:flex; justify-content:space-between; align-items:center;
-  padding:8px; border-top:2px solid #333; gap:10px; flex-wrap:wrap;
-}
+  <!-- Bottom Toolbar -->
+  <div id="bottom-bar">
+    <div id="palette-container">
+      <div id="palette"></div>
+      <div id="points-display">6/6</div>
+    </div>
+    <div id="toolbar">
+      <button class="tool-btn" id="toggle-grid">Grid</button>
+      <button class="tool-btn" id="toggle-sound">🔊</button>
+    </div>
+  </div>
 
-/* Palette container */
-#palette-container {
-  display:flex; align-items:center; gap:10px;
-  width:calc(100% - 80px); overflow-x:auto; overflow-y:hidden;
-}
-#palette {
-  display:inline-flex; gap:4px; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; min-width:0;
-}
-.color-swatch {
-  width:36px; height:36px; border:2px solid #444; border-radius:4px;
-  cursor:pointer; text-align:center; line-height:36px; font-size:12px; color:#fff; user-select:none;
-}
-.color-swatch.selected { border:2px solid #fff; }
-
-/* Points display */
-#points-display { font-weight:bold; min-width:60px; text-align:center; font-size:14px; }
-
-/* Toolbar */
-#toolbar { display:flex; gap:8px; flex-wrap:wrap; }
-.tool-btn { padding:6px 10px; border:none; border-radius:6px; background:#333; color:white; cursor:pointer; font-weight:bold; font-size:14px; }
-.tool-btn:hover { background:#555; }
-
-/* Floating Chat */
-#chat-popup {
-  position:absolute; bottom:70px; right:10px; width:300px; max-height:50%;
-  background: rgba(30,30,30,0.2); border-radius:12px; box-shadow:0 0 15px rgba(0,0,0,0.5);
-  display:flex; flex-direction:column; overflow:hidden; font-family:Arial,sans-serif; z-index:10;
-  transition: height 0.3s ease;
-}
-.chat-header { display:flex; justify-content:center; align-items:center; padding:8px 12px; font-weight:bold; color:#fff; cursor:pointer; }
-#chat-feed { flex:1; padding:8px; overflow-y:auto; color:#fff; }
-.chat-msg { margin-bottom:6px; padding:6px 8px; background: rgba(68,68,68,0.3); border-radius:8px; word-wrap:break-word; font-size:14px; color:#fff; }
-.chat-input { display:flex; padding:6px; gap:6px; border-top:1px solid rgba(51,51,51,0.5); }
-.chat-input input { flex:1; padding:6px 8px; border-radius:6px; border:none; background: rgba(17,17,17,0.5); color:#fff; font-size:14px; }
-.chat-input button { padding:6px 12px; border:none; border-radius:6px; background:#555; color:white; cursor:pointer; font-size:14px; }
-.chat-input button:hover { background:#777; }
-
-/* Chat minimized */
-#chat-popup.minimized { height:40px; }
-#chat-popup.minimized #chat-feed,
-#chat-popup.minimized .chat-input { display:none; }
+  <script src="script.js"></script>
+</body>
+</html>
