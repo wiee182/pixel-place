@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pixel Canvas</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
   <!-- Page background -->
@@ -19,11 +17,11 @@
 
   <!-- Floating Chat -->
   <div id="chat-popup">
-    <div id="chat-toggle"><i class="fa-solid fa-comments"></i> Chat</div>
+    <div id="chat-toggle">💬 Chat</div>
     <div id="chat-feed"></div>
     <div class="chat-input">
       <input type="text" id="chat-message" placeholder="Type a message...">
-      <button id="send-message"><i class="fa-solid fa-paper-plane"></i></button>
+      <button id="send-message">Send</button>
     </div>
   </div>
 
@@ -31,14 +29,17 @@
   <div id="bottom-bar">
     <div id="palette-container">
       <div id="palette"></div>
-      <button id="more-colors"><i class="fa-solid fa-palette"></i></button>
+      <button id="more-colors">More</button>
       <div id="points-display">6/6</div>
     </div>
     <div id="toolbar">
-      <button class="tool-btn" id="toggle-grid"><i class="fa-solid fa-border-all"></i></button>
-      <button class="tool-btn" id="toggle-sound"><i class="fa-solid fa-volume-high"></i></button>
+      <button class="tool-btn" id="toggle-grid">🟦 Grid</button>
+      <button class="tool-btn" id="toggle-sound">🔊</button>
     </div>
   </div>
+
+  <!-- More Colors Popup -->
+  <div id="more-colors-popup" class="hidden"></div>
 
   <script src="script.js"></script>
 </body>

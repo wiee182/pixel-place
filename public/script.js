@@ -20,8 +20,8 @@ const moreColorsPopup = document.getElementById("more-colors-popup");
 const moreBtn = document.getElementById("more-colors");
 const pointsDisplay = document.getElementById("points-display");
 
-let userPoints = 6, lastActionTime = Date.now();
 let soundEnabled = true;
+let myPoints = 6;
 
 // ===== Audio =====
 const drawAudio = new Audio('sounds/draw.mp3'); drawAudio.volume=0.2;
@@ -52,17 +52,15 @@ function drawGrid(){
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  // White world block with shadow
+  // white world with glow
   ctx.save();
   ctx.shadowColor = "rgba(0,0,0,0.6)";
   ctx.shadowBlur = 40;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 0;
   ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+  ctx.fillRect(0,0,WORLD_WIDTH,WORLD_HEIGHT);
   ctx.restore();
 
-  // Draw existing pixels
+  // draw pixels
   chunks.forEach(chunk=>{
     chunk.forEach(p=>{
       ctx.fillStyle=p.color;
@@ -70,7 +68,7 @@ function drawGrid(){
     });
   });
 
-  // Grid lines
+  // draw grid
   if(showGrid){
     ctx.strokeStyle="#000";
     ctx.lineWidth=1/scale;
@@ -91,6 +89,7 @@ colors.forEach((c,i)=>{
   sw.className="color-swatch";
   sw.style.background=c;
   sw.dataset.color=c;
+  sw.textContent=i;
   sw.addEventListener("click",()=>{
     document.querySelectorAll(".color-swatch").forEach(s=>s.classList.remove("selected"));
     sw.classList.add("selected");
@@ -106,14 +105,6 @@ document.getElementById("toggle-grid").addEventListener("click", ()=>{
   drawGrid();
 });
 
-// ===== Sound Toggle =====
-document.getElementById("toggle-sound").addEventListener("click", e=>{
-  soundEnabled = !soundEnabled;
-  e.currentTarget.innerHTML = soundEnabled 
-    ? '<i class="fa-solid fa-volume-high"></i>'
-    : '<i class="fa-solid fa-volume-xmark"></i>';
-});
-
 // ===== Chat Toggle =====
 chatToggle.addEventListener("click", ()=>{
   chatPopup.classList.toggle("minimized");
@@ -123,6 +114,60 @@ chatToggle.addEventListener("click", ()=>{
 moreBtn.addEventListener("click", ()=>{
   moreColorsPopup.classList.toggle("hidden");
 });
+
+// ===== WebSocket =====
+const ws = new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host);
+
+ws.addEventListener("message", e=>{
+  const data = JSON.parse(e.data);
+
+  if(data.type === "init"){
+    // load pixels
+    (data.pixels||[]).forEach(p=>addPixel(p.x,p.y,p.color));
+    // load chat
+    (data.chat||[]).forEach(msg=>addChatMessage(msg.text));
+    myPoints = data.points || 6;
+    updatePoints();
+    drawGrid();
+  }
+
+  if(data.type === "draw"){
+    addPixel(data.x,data.y,data.color);
+    drawGrid();
+  }
+
+  if(data.type === "chat"){
+    addChatMessage(data.text);
+  }
+
+  if(data.type === "points"){
+    myPoints = data.points;
+    updatePoints();
+  }
+});
+
+// ===== Helpers =====
+function addPixel(x,y,color){
+  const key = `${Math.floor(x/100)},${Math.floor(y/100)}`;
+  if(!chunks.has(key)) chunks.set(key,[]);
+  const chunk = chunks.get(key);
+  const idx = chunk.findIndex(p=>p.x===x && p.y===y);
+  if(idx>=0) chunk[idx].color=color;
+  else chunk.push({x,y,color});
+}
+
+function addChatMessage(text){
+  const msg = document.createElement("div");
+  msg.className="chat-msg";
+  msg.textContent=text;
+  chatFeed.appendChild(msg);
+  chatFeed.scrollTop = chatFeed.scrollHeight;
+}
+
+function updatePoints(){
+  pointsDisplay.textContent = `${myPoints}/6`;
+  pointsDisplay.style.color = myPoints>0 ? "#0f0" : "#f33";
+}
 
 // ===== Draw Pixel =====
 canvas.addEventListener("click", e=>{
@@ -134,27 +179,13 @@ canvas.addEventListener("click", e=>{
   const x = Math.max(0, Math.min(WORLD_WIDTH-GRID_SIZE, Math.floor(worldX/GRID_SIZE)*GRID_SIZE));
   const y = Math.max(0, Math.min(WORLD_HEIGHT-GRID_SIZE, Math.floor(worldY/GRID_SIZE)*GRID_SIZE));
 
-  const key = `${Math.floor(x/100)},${Math.floor(y/100)}`;
-  if(!chunks.has(key)) chunks.set(key, []);
-  chunks.get(key).push({x,y,color:currentColor});
-
+  ws.send(JSON.stringify({ type:"draw", x,y,color:currentColor,size:GRID_SIZE }));
   playSound(drawAudio);
-  drawGrid();
 });
 
 // ===== Pan =====
-canvas.addEventListener("mousedown", e=>{
-  isDragging=true; 
-  dragStartX=e.clientX-offsetX; 
-  dragStartY=e.clientY-offsetY;
-});
-canvas.addEventListener("mousemove", e=>{
-  if(isDragging){
-    offsetX=e.clientX-dragStartX; 
-    offsetY=e.clientY-dragStartY; 
-    drawGrid();
-  }
-});
+canvas.addEventListener("mousedown", e=>{isDragging=true; dragStartX=e.clientX-offsetX; dragStartY=e.clientY-offsetY;});
+canvas.addEventListener("mousemove", e=>{if(isDragging){offsetX=e.clientX-dragStartX; offsetY=e.clientY-dragStartY; drawGrid();}});
 canvas.addEventListener("mouseup", ()=>{isDragging=false;});
 canvas.addEventListener("mouseleave", ()=>{isDragging=false;});
 
@@ -174,17 +205,11 @@ canvas.addEventListener("wheel", e=>{
 
 // ===== Chat Send =====
 sendBtn.addEventListener("click", sendMessage);
-chatInput.addEventListener("keydown", e=>{
-  if(e.key==="Enter"){sendMessage(); e.preventDefault();}
-});
+chatInput.addEventListener("keydown", e=>{if(e.key==="Enter"){sendMessage(); e.preventDefault();}});
 function sendMessage(){
   const text = chatInput.value.trim();
   if(!text) return;
-  const msg = document.createElement("div");
-  msg.className="chat-msg";
-  msg.textContent=text;
-  chatFeed.appendChild(msg);
-  chatFeed.scrollTop = chatFeed.scrollHeight;
+  ws.send(JSON.stringify({ type:"chat", text }));
   chatInput.value='';
 }
 
