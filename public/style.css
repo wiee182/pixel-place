@@ -7,13 +7,14 @@ body {
   align-items: center;
   height: 100vh;
   overflow: hidden;
+  font-family: 'Segoe UI', sans-serif;
 }
 
-/* Canvas as whiteboard floating in dark space */
+/* Canvas */
 #pixelCanvas {
   background: #fff;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 30px rgba(0,0,0,0.5);
-  border-radius: 12px;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.5);
+  border-radius: 16px;
   cursor: crosshair;
   transition: box-shadow 0.3s ease;
 }
@@ -27,62 +28,70 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #555;
-  padding: 12px 20px;
-  border-radius: 20px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+  background: linear-gradient(135deg, #222, #444);
+  padding: 14px 24px;
+  border-radius: 30px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.6);
   z-index: 10;
 }
 
+/* Buttons */
 #bottom-bar button {
   border: none;
-  border-radius: 8px;
-  padding: 8px 12px;
-  background: #666;
+  border-radius: 12px;
+  padding: 10px 16px;
+  background: #555;
   color: #fff;
+  font-weight: bold;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 #bottom-bar button:hover {
-  transform: scale(1.1);
-  background: #777;
+  transform: scale(1.15);
+  background: #00aaff;
+  color: #fff;
 }
 
 /* Palette */
+#palette-container {
+  position: relative;
+}
 #palette {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  justify-content: center;
 }
 .color-swatch {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   cursor: pointer;
   border: 2px solid transparent;
   transition: all 0.2s ease, transform 0.2s ease, box-shadow 0.3s ease;
 }
 .color-swatch.selected, .color-swatch:hover {
-  transform: scale(1.2);
-  box-shadow: 0 0 10px rgba(255,255,255,0.7), 0 0 20px rgba(0,170,255,0.5);
+  transform: scale(1.25);
+  box-shadow: 0 0 12px rgba(0,170,255,0.6), 0 0 25px rgba(0,255,170,0.3);
 }
 
 /* Popup */
 #more-colors-popup {
   position: absolute;
-  bottom: 40px;
+  bottom: 50px;
   left: 0;
-  max-height: 200px;
+  max-height: 220px;
+  width: 240px;
   overflow-y: auto;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  background: #444;
-  padding: 8px;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  background: linear-gradient(145deg, #333, #555);
+  padding: 12px;
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
   opacity: 0;
   transform: translateY(10px);
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   pointer-events: none;
   z-index: 15;
 }
@@ -98,6 +107,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-right: 10px;
 }
 #cooldown-ring {
   position: absolute;
@@ -112,45 +122,52 @@ body {
 }
 #ring-progress {
   fill: none;
-  stroke: #00aaff;
+  stroke: #00ffff;
   stroke-width: 4;
   stroke-dasharray: 113;
   stroke-dashoffset: 113;
-  transition: stroke-dashoffset 1s linear;
+  transition: stroke-dashoffset 0.5s linear;
 }
 #points-display {
   font-weight: bold;
   color: #00ff9d;
+  font-size: 16px;
 }
 
-/* Chat */
+/* Chat Box */
 #chat-box {
   position: fixed;
   right: 20px;
-  bottom: 80px;
-  width: 260px;
-  background: #222;
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  bottom: 90px;
+  width: 280px;
+  background: linear-gradient(145deg, #222, #333);
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.6);
   display: flex;
   flex-direction: column;
-  transition: height 0.2s;
+  transition: all 0.3s ease;
   overflow: hidden;
+  font-size: 14px;
+  z-index: 10;
+}
+#chat-box.minimized {
+  height: 40px;
+  width: 160px;
 }
 #chat-header {
-  background: #333;
+  background: linear-gradient(145deg, #111, #222);
   color: #fff;
-  padding: 6px;
+  padding: 8px;
   text-align: center;
   font-weight: bold;
   cursor: pointer;
+  border-bottom: 1px solid #444;
 }
 #chat-feed {
   flex: 1;
-  padding: 8px;
+  padding: 10px;
   overflow-y: auto;
   color: #fff;
-  font-size: 14px;
 }
 .chat-msg {
   margin-bottom: 6px;
@@ -161,19 +178,19 @@ body {
 }
 #chat-message {
   flex: 1;
-  padding: 6px;
+  padding: 8px;
   border: none;
   background: #111;
   color: #fff;
 }
 #send-message {
   border: none;
-  padding: 6px 10px;
-  background: #555;
+  padding: 8px 12px;
+  background: #00aaff;
   color: #fff;
   cursor: pointer;
+  font-weight: bold;
 }
-#chat-box.minimized #chat-feed,
-#chat-box.minimized #chat-input-container {
-  display: none;
+#send-message:hover {
+  background: #00ffea;
 }
