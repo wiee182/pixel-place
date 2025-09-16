@@ -22,24 +22,23 @@ const chunks = new Map();
 const colors = [
   "#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100",
   "#382314","#7c3f20","#c16f36","#feac6d","#ffd3b0","#fea5d0",
-  "#f04eb4","#e872ff","#a631d3","#531c8d","#0335be","#149dfe",
-  "#8df4fe","#00bea5","#17777f","#044522","#18862f","#60e121",
-  "#b1ff37","#fffea4","#fce011","#fe9e17","#f66e08","#550123",
-  "#99011a","#f20e0c","#ff7872"
+  "#f04eb4","#e872ff","#a631d3","#531c8d","#531c8d","#0335be",
+  "#149dfe","#8df4fe","#00bea5","#17777f","#044522","#18862f",
+  "#60e121","#b1ff37","#fffea4","#fce011","#fe9e17","#f66e08",
+  "#550123","#99011a","#f20e0c","#ff7872"
 ];
 
 const paletteDiv = document.getElementById("palette");
-const moreBtn = document.getElementById("more-colors-btn");
-const morePopup = document.getElementById("more-colors-popup");
-const morePaletteDiv = document.getElementById("more-palette");
 const toggleGridBtn = document.getElementById("toggle-grid");
 const chatPopup = document.getElementById("chat-popup");
-const chatMinimize = document.getElementById("chat-minimize");
 const chatFeed = document.getElementById("chat-feed");
 const chatInput = document.getElementById("chat-message");
 const sendBtn = document.getElementById("send-message");
 const pointsDisplay = document.getElementById("points-display");
 const toggleSoundBtn = document.getElementById("toggle-sound");
+const chatMinimize = document.getElementById("chat-minimize");
+const moreBtn = document.getElementById("more-btn");
+const moreColorsPopup = document.getElementById("more-colors-popup");
 
 let userPoints = 6;
 let lastActionTime = Date.now();
@@ -132,36 +131,21 @@ function handleIncomingPixel(p){
 }
 
 // ===== Palette =====
-colors.slice(0,6).forEach((c,i)=>{
-  const sw = document.createElement("div");
-  sw.className="color-swatch";
-  sw.style.background=c;
-  sw.dataset.color=c;
-  sw.textContent=i;
-  sw.addEventListener("click",()=>{
-    document.querySelectorAll(".color-swatch").forEach(s=>s.classList.remove("selected"));
-    sw.classList.add("selected");
-    currentColor=c;
-  });
-  paletteDiv.appendChild(sw);
-});
-document.querySelector(".color-swatch").classList.add("selected");
-
-// ===== More Colors Popup =====
 colors.forEach((c,i)=>{
   const sw = document.createElement("div");
   sw.className="color-swatch";
   sw.style.background=c;
   sw.dataset.color=c;
-  sw.textContent=i;
+  sw.textContent=i<6?i:""; // first 6 colors visible, rest in popup
   sw.addEventListener("click",()=>{
     document.querySelectorAll(".color-swatch").forEach(s=>s.classList.remove("selected"));
     sw.classList.add("selected");
     currentColor=c;
   });
-  morePaletteDiv.appendChild(sw);
+  if(i<6) paletteDiv.appendChild(sw);
+  else moreColorsPopup.appendChild(sw);
 });
-moreBtn.addEventListener("click",()=>{ morePopup.classList.toggle("show"); });
+document.querySelector(".color-swatch").classList.add("selected");
 
 // ===== Grid Toggle =====
 toggleGridBtn.addEventListener("click",()=>{
@@ -186,42 +170,10 @@ canvas.addEventListener("wheel", e=>{
   zoomAt(mx,my,e.deltaY<0?1.1:0.9);
   drawGrid();
 });
-
-// Pan
 canvas.addEventListener("mousedown", e=>{isDragging=true; dragStartX=e.clientX-offsetX; dragStartY=e.clientY-offsetY;});
 canvas.addEventListener("mousemove", e=>{if(isDragging){offsetX=e.clientX-dragStartX; offsetY=e.clientY-dragStartY; drawGrid();}});
 canvas.addEventListener("mouseup", ()=>{isDragging=false;});
 canvas.addEventListener("mouseleave", ()=>{isDragging=false;});
-
-// Touch Pan & Pinch
-canvas.addEventListener("touchstart", e=>{
-  if(e.touches.length===1){ isDragging=true; dragStartX=e.touches[0].clientX-offsetX; dragStartY=e.touches[0].clientY-offsetY; }
-  if(e.touches.length===2){
-    isDragging=false;
-    const dx=e.touches[0].clientX-e.touches[1].clientX;
-    const dy=e.touches[0].clientY-e.touches[1].clientY;
-    pinchStartDist=Math.hypot(dx,dy);
-    pinchStartScale=scale;
-  }
-});
-canvas.addEventListener("touchmove", e=>{
-  e.preventDefault();
-  if(e.touches.length===1 && isDragging){
-    offsetX=e.touches[0].clientX-dragStartX;
-    offsetY=e.touches[0].clientY-dragStartY;
-    drawGrid();
-  }
-  if(e.touches.length===2){
-    const dx=e.touches[0].clientX-e.touches[1].clientX;
-    const dy=e.touches[0].clientY-e.touches[1].clientY;
-    const dist=Math.hypot(dx,dy);
-    const rect = canvas.getBoundingClientRect();
-    const centerX = ((e.touches[0].clientX+e.touches[1].clientX)/2-rect.left-offsetX)/scale;
-    const centerY = ((e.touches[0].clientY+e.touches[1].clientY)/2-rect.top-offsetY)/scale;
-    zoomAt(centerX, centerY, dist/pinchStartDist*pinchStartScale/scale);
-  }
-});
-canvas.addEventListener("touchend", e=>{if(e.touches.length===0) isDragging=false; pinchStartDist=null;});
 
 // ===== Draw Pixel & Points =====
 canvas.addEventListener("click", e=>{
@@ -259,12 +211,29 @@ function sendMessage(){
 }
 
 // ===== Chat Minimize =====
+let chatMinimized = false;
 chatMinimize.addEventListener("click", ()=>{
-  chatPopup.classList.toggle("minimized");
+  chatMinimized = !chatMinimized;
+  if(chatMinimized){
+    chatPopup.style.height = "40px";
+    chatPopup.style.opacity = "0.5";
+    chatFeed.style.display = "none";
+    chatInput.style.display = "none";
+  } else {
+    chatPopup.style.height = "50%";
+    chatPopup.style.opacity = "1";
+    chatFeed.style.display = "flex";
+    chatInput.style.display = "flex";
+  }
 });
 
 // ===== Toggle Sound =====
 toggleSoundBtn.addEventListener("click",()=>{soundEnabled=!soundEnabled; toggleSoundBtn.textContent=soundEnabled?"🔊":"🔇";});
+
+// ===== More Colors Popup =====
+moreBtn.addEventListener("click", ()=>{
+  moreColorsPopup.classList.toggle("hidden");
+});
 
 // ===== Points Display =====
 function updatePointsDisplay(){
