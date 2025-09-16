@@ -1,74 +1,69 @@
-// ===== Constants =====
-const GRID_SIZE = 10;
-const WORLD_WIDTH = 5000;
-const WORLD_HEIGHT = 5000;
-
 // ===== Canvas Setup =====
 const canvas = document.getElementById("pixelCanvas");
 const ctx = canvas.getContext("2d");
 
 let scale = 1, offsetX = 0, offsetY = 0;
 let isDragging = false, dragStartX = 0, dragStartY = 0;
+const GRID_SIZE = 10;
+const WORLD_WIDTH = 5000;
+const WORLD_HEIGHT = 5000;
+const chunks = new Map(); // chunked pixels from server
 
 // ===== Colors =====
-const colors = ["#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100","#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff"];
+const colors = [
+  "#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100",
+  "#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff",
+  "#ffa500","#800080","#008000","#00ced1","#ff1493","#ffd700",
+  "#a52a2a","#808000"
+];
 let currentColor = colors[0];
 
-// ===== Palette Elements =====
+// ===== Palette =====
 const paletteDiv = document.getElementById("palette");
 const moreColorsPopup = document.getElementById("more-colors-popup");
 const moreBtn = document.getElementById("more-colors");
 
-// --- Main swatch ---
+// Main swatch
 const mainSwatch = document.createElement("div");
 mainSwatch.className = "color-swatch selected";
 mainSwatch.style.background = currentColor;
-mainSwatch.dataset.color = currentColor;
-mainSwatch.addEventListener("click", () => {
-  currentColor = mainSwatch.dataset.color;
-});
 paletteDiv.appendChild(mainSwatch);
 
-// --- Fill popup with all colors ---
+// Popup colors
 colors.forEach(c => {
   const sw = document.createElement("div");
   sw.className = "color-swatch";
   sw.style.background = c;
-  sw.dataset.color = c;
   sw.addEventListener("click", () => {
     currentColor = c;
-    mainSwatch.style.background = c; // update main swatch
+    mainSwatch.style.background = c;
     moreColorsPopup.classList.remove("show");
   });
   moreColorsPopup.appendChild(sw);
 });
 
-// --- Toggle popup ---
-moreBtn.addEventListener("click", (e) => {
+// Toggle popup
+moreBtn.addEventListener("click", e => {
   e.stopPropagation();
   moreColorsPopup.classList.toggle("show");
 });
-
-// --- Close popup on outside click ---
-document.addEventListener("click", (e) => {
+document.addEventListener("click", e => {
   if (!moreColorsPopup.contains(e.target) && e.target !== moreBtn) {
     moreColorsPopup.classList.remove("show");
   }
 });
 
-// ===== Points =====
-const pointsDisplay = document.getElementById("points-display");
-let userPoints = 6;
-function updatePoints(points) {
-  userPoints = points;
-  pointsDisplay.textContent = `${points}/6`;
-}
-
 // ===== Chat =====
+const chatBox = document.getElementById("chat-box");
+const chatHeader = document.getElementById("chat-header");
 const chatFeed = document.getElementById("chat-feed");
 const chatInput = document.getElementById("chat-message");
 const sendBtn = document.getElementById("send-message");
 
+// Minimize/maximize chat
+chatHeader.addEventListener("click", () => chatBox.classList.toggle("minimized"));
+
+// Add chat message
 function addChatMessage(user, text) {
   const msg = document.createElement("div");
   msg.className = "chat-msg";
@@ -77,6 +72,7 @@ function addChatMessage(user, text) {
   chatFeed.scrollTop = chatFeed.scrollHeight;
 }
 
+// Send chat
 sendBtn.addEventListener("click", sendMessage);
 chatInput.addEventListener("keydown", e => {
   if (e.key === "Enter") { sendMessage(); e.preventDefault(); }
@@ -88,11 +84,18 @@ function sendMessage() {
   chatInput.value = "";
 }
 
+// ===== Points =====
+const pointsDisplay = document.getElementById("points-display");
+let userPoints = 6;
+function updatePoints(points) {
+  userPoints = points;
+  pointsDisplay.textContent = `${points}/6`;
+}
+
 // ===== WebSocket =====
 const ws = new WebSocket(location.origin.replace(/^http/, "ws"));
-const chunks = new Map();
 
-ws.onmessage = (event) => {
+ws.onmessage = event => {
   const data = JSON.parse(event.data);
 
   if (data.type === "init") {
@@ -122,15 +125,16 @@ function setPixel(x, y, color) {
   const chunk = chunks.get(key);
   const idx = chunk.findIndex(p => p.x === x && p.y === y);
   if (idx >= 0) chunk[idx].color = color;
-  else chunk.push({x,y,color});
+  else chunk.push({ x, y, color });
 }
 
 // ===== Drawing =====
 canvas.addEventListener("click", e => {
   if (isDragging) return;
+
   const rect = canvas.getBoundingClientRect();
-  const worldX = (e.clientX-rect.left-offsetX)/scale;
-  const worldY = (e.clientY-rect.top-offsetY)/scale;
+  const worldX = (e.clientX - rect.left - offsetX)/scale;
+  const worldY = (e.clientY - rect.top - offsetY)/scale;
   const x = Math.max(0, Math.min(WORLD_WIDTH-GRID_SIZE, Math.floor(worldX/GRID_SIZE)*GRID_SIZE));
   const y = Math.max(0, Math.min(WORLD_HEIGHT-GRID_SIZE, Math.floor(worldY/GRID_SIZE)*GRID_SIZE));
 
@@ -155,12 +159,12 @@ canvas.addEventListener("mouseleave", () => isDragging=false);
 canvas.addEventListener("wheel", e => {
   e.preventDefault();
   const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX-rect.left-offsetX)/scale;
-  const my = (e.clientY-rect.top-offsetY)/scale;
-  const zoom = e.deltaY<0 ? 1.1 : 0.9;
+  const mx = (e.clientX - rect.left - offsetX)/scale;
+  const my = (e.clientY - rect.top - offsetY)/scale;
+  const zoom = e.deltaY < 0 ? 1.1 : 0.9;
   const newScale = Math.min(Math.max(0.1, scale*zoom),5);
-  offsetX -= (mx*(newScale-scale));
-  offsetY -= (my*(newScale-scale));
+  offsetX -= (mx*(newScale - scale));
+  offsetY -= (my*(newScale - scale));
   scale = newScale;
   drawGrid();
 });
@@ -184,13 +188,12 @@ function drawGrid() {
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  chunks.forEach(chunk => {
-    chunk.forEach(p => {
-      ctx.fillStyle = p.color;
-      ctx.fillRect(p.x, p.y, GRID_SIZE, GRID_SIZE);
-    });
-  });
+  chunks.forEach(chunk => chunk.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, GRID_SIZE, GRID_SIZE);
+  }));
 
+  // Grid
   ctx.strokeStyle = "#111";
   ctx.lineWidth = 1/scale;
   for (let x=0;x<=WORLD_WIDTH;x+=GRID_SIZE){
@@ -202,6 +205,5 @@ function drawGrid() {
 
   ctx.restore();
 }
-
 function animate() { drawGrid(); requestAnimationFrame(animate); }
 animate();
