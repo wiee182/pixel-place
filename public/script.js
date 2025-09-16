@@ -7,7 +7,7 @@ let isDragging = false, dragStartX = 0, dragStartY = 0;
 const GRID_SIZE = 10;
 const WORLD_WIDTH = 5000;
 const WORLD_HEIGHT = 5000;
-const chunks = new Map(); // chunked pixels from server
+const chunks = new Map();
 
 // ===== Colors =====
 const colors = [
@@ -37,6 +37,11 @@ colors.forEach(c => {
   sw.addEventListener("click", () => {
     currentColor = c;
     mainSwatch.style.background = c;
+
+    // Glow effect
+    moreColorsPopup.querySelectorAll(".color-swatch").forEach(s => s.classList.remove("selected"));
+    sw.classList.add("selected");
+
     moreColorsPopup.classList.remove("show");
   });
   moreColorsPopup.appendChild(sw);
@@ -60,10 +65,8 @@ const chatFeed = document.getElementById("chat-feed");
 const chatInput = document.getElementById("chat-message");
 const sendBtn = document.getElementById("send-message");
 
-// Minimize/maximize chat
 chatHeader.addEventListener("click", () => chatBox.classList.toggle("minimized"));
 
-// Add chat message
 function addChatMessage(user, text) {
   const msg = document.createElement("div");
   msg.className = "chat-msg";
@@ -72,7 +75,6 @@ function addChatMessage(user, text) {
   chatFeed.scrollTop = chatFeed.scrollHeight;
 }
 
-// Send chat
 sendBtn.addEventListener("click", sendMessage);
 chatInput.addEventListener("keydown", e => {
   if (e.key === "Enter") { sendMessage(); e.preventDefault(); }
@@ -84,13 +86,42 @@ function sendMessage() {
   chatInput.value = "";
 }
 
-// ===== Points =====
+// ===== Points & Cooldown Ring =====
 const pointsDisplay = document.getElementById("points-display");
-let userPoints = 6;
-function updatePoints(points) {
-  userPoints = points;
-  pointsDisplay.textContent = `${points}/6`;
+const ringProgress = document.getElementById("ring-progress");
+const MAX_POINTS = 6;
+let points = MAX_POINTS;
+let lastPlaceTime = Date.now();
+const COOLDOWN = 20000; // 20s per point
+
+function updateRing() {
+  const ratio = points / MAX_POINTS;
+  const circumference = 2 * Math.PI * 18;
+  ringProgress.style.strokeDasharray = circumference;
+  ringProgress.style.strokeDashoffset = circumference * (1 - ratio);
 }
+
+function updatePoints(p) {
+  points = p;
+  pointsDisplay.textContent = `${points}/${MAX_POINTS}`;
+  updateRing();
+}
+
+setInterval(() => {
+  const now = Date.now();
+  if (points < MAX_POINTS && now - lastPlaceTime >= COOLDOWN) {
+    points++;
+    updatePoints(points);
+    lastPlaceTime = now;
+  }
+}, 1000);
+
+// ===== Audio =====
+const drawAudio = document.getElementById("draw-sound");
+let soundEnabled = true;
+document.getElementById("toggle-sound").addEventListener("click", () => {
+  soundEnabled = !soundEnabled;
+});
 
 // ===== WebSocket =====
 const ws = new WebSocket(location.origin.replace(/^http/, "ws"));
@@ -101,18 +132,11 @@ ws.onmessage = event => {
   if (data.type === "init") {
     data.canvas.forEach(p => setPixel(p.x, p.y, p.color));
     drawGrid();
-
     chatFeed.innerHTML = "";
     data.chat.forEach(msg => addChatMessage(msg.user, msg.message));
-
     updatePoints(data.points);
   }
-
-  if (data.type === "draw") {
-    setPixel(data.x, data.y, data.color);
-    drawGrid();
-  }
-
+  if (data.type === "draw") { setPixel(data.x, data.y, data.color); drawGrid(); }
   if (data.type === "chat") addChatMessage(data.user, data.message);
   if (data.type === "points") updatePoints(data.points);
   if (data.type === "error") console.warn(data.message);
@@ -131,6 +155,7 @@ function setPixel(x, y, color) {
 // ===== Drawing =====
 canvas.addEventListener("click", e => {
   if (isDragging) return;
+  if (points <= 0) return;
 
   const rect = canvas.getBoundingClientRect();
   const worldX = (e.clientX - rect.left - offsetX)/scale;
@@ -138,7 +163,12 @@ canvas.addEventListener("click", e => {
   const x = Math.max(0, Math.min(WORLD_WIDTH-GRID_SIZE, Math.floor(worldX/GRID_SIZE)*GRID_SIZE));
   const y = Math.max(0, Math.min(WORLD_HEIGHT-GRID_SIZE, Math.floor(worldY/GRID_SIZE)*GRID_SIZE));
 
+  if (soundEnabled) drawAudio.cloneNode().play();
   ws.send(JSON.stringify({ type: "draw", x, y, color: currentColor, user: "anon" }));
+
+  points = Math.max(0, points - 1);
+  lastPlaceTime = Date.now();
+  updatePoints(points);
 });
 
 // ===== Pan & Zoom =====
@@ -181,7 +211,7 @@ resizeCanvas();
 
 // ===== Draw Loop =====
 function drawGrid() {
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = "#fff";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
   ctx.save();
@@ -193,8 +223,7 @@ function drawGrid() {
     ctx.fillRect(p.x, p.y, GRID_SIZE, GRID_SIZE);
   }));
 
-  // Grid
-  ctx.strokeStyle = "#111";
+  ctx.strokeStyle = "#eee";
   ctx.lineWidth = 1/scale;
   for (let x=0;x<=WORLD_WIDTH;x+=GRID_SIZE){
     ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,WORLD_HEIGHT); ctx.stroke();

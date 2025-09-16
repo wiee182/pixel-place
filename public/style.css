@@ -9,11 +9,13 @@ body {
   overflow: hidden;
 }
 
-/* Canvas */
+/* Canvas as whiteboard floating in dark space */
 #pixelCanvas {
   background: #fff;
-  box-shadow: 0 0 25px rgba(0,0,0,0.8);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 30px rgba(0,0,0,0.5);
+  border-radius: 12px;
   cursor: crosshair;
+  transition: box-shadow 0.3s ease;
 }
 
 /* Bottom Bar */
@@ -57,10 +59,11 @@ body {
   border-radius: 6px;
   cursor: pointer;
   border: 2px solid transparent;
-  transition: all 0.2s;
+  transition: all 0.2s ease, transform 0.2s ease, box-shadow 0.3s ease;
 }
-.color-swatch.selected {
-  border: 2px solid #fff;
+.color-swatch.selected, .color-swatch:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 10px rgba(255,255,255,0.7), 0 0 20px rgba(0,170,255,0.5);
 }
 
 /* Popup */
@@ -113,7 +116,7 @@ body {
   stroke-width: 4;
   stroke-dasharray: 113;
   stroke-dashoffset: 113;
-  transition: stroke-dashoffset 0.2s linear;
+  transition: stroke-dashoffset 1s linear;
 }
 #points-display {
   font-weight: bold;
