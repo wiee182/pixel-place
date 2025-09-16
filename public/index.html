@@ -2,53 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pixel Canvas</title>
+  <title>Pixel Place</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Canvas Background -->
-  <div id="page-bg"></div>
-
-  <!-- Canvas -->
+  <!-- ===== Canvas ===== -->
   <div id="canvas-container">
     <canvas id="pixelCanvas"></canvas>
   </div>
 
-  <!-- Chat -->
-  <div id="chat-popup" class="minimized">
-    <div id="chat-toggle">Chat</div>
+  <!-- ===== Chat ===== -->
+  <div id="chat-popup">
+    <div id="chat-header">
+      <span id="chat-toggle">Chat</span>
+    </div>
     <div id="chat-feed"></div>
-    <div class="chat-input">
+    <div id="chat-input-container">
       <input type="text" id="chat-message" placeholder="Type a message...">
       <button id="send-message">Send</button>
     </div>
   </div>
 
-  <!-- Bottom Bar -->
+  <!-- ===== Bottom Toolbar ===== -->
   <div id="bottom-bar">
-    <div id="palette-container">
-      <div id="palette"></div>
-      <button id="more-colors">＋</button>
-    </div>
-
-    <!-- Points with progress ring -->
-    <div id="points-container">
-      <svg class="progress-ring" width="50" height="50">
-        <circle class="progress-ring__bg" r="22" cx="25" cy="25"/>
-        <circle class="progress-ring__progress" r="22" cx="25" cy="25"/>
+    <!-- Points Progress -->
+    <div id="points-wrapper">
+      <svg id="points-ring" width="60" height="60">
+        <circle class="bg" cx="30" cy="30" r="25" />
+        <circle class="progress" cx="30" cy="30" r="25" />
       </svg>
-      <div id="points-display">6/6</div>
+      <span id="points-display">6/6</span>
     </div>
 
-    <div id="toolbar">
-      <button class="tool-btn" id="toggle-grid">Grid</button>
-      <button class="tool-btn" id="toggle-sound">🔊</button>
+    <!-- Palette -->
+    <div id="palette"></div>
+    <button id="more-colors">+</button>
+    <div id="more-colors-popup" class="hidden"></div>
+
+    <!-- Controls -->
+    <div id="controls">
+      <button id="toggle-grid">Grid</button>
+      <button id="toggle-sound">Sound</button>
     </div>
   </div>
-
-  <!-- More Colors Popup -->
-  <div id="more-colors-popup" class="hidden"></div>
 
   <script src="script.js"></script>
 </body>

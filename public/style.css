@@ -1,91 +1,200 @@
-/* Reset */
-* { margin:0; padding:0; box-sizing:border-box; }
-body, html { height:100%; overflow:hidden; font-family:Arial,sans-serif; background:#000; }
-#page-bg { position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:-1; }
-
-/* Canvas */
-#canvas-container { position:relative; width:100%; height:100%; }
-#pixelCanvas { position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);
-  background:#fff; box-shadow:0 0 20px rgba(0,0,0,0.7);
-  cursor:crosshair; image-rendering:pixelated; }
-
-/* Bottom Bar */
-#bottom-bar {
-  position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
-  background: rgba(20,20,20,0.95);
-  display:flex; justify-content:center; align-items:center;
-  padding:10px 20px; border-radius:40px; gap:20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+/* ===== General ===== */
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #000;
+  font-family: Arial, sans-serif;
+  color: #fff;
+  overflow: hidden;
 }
 
-/* Palette */
-#palette-container { display:flex; align-items:center; gap:8px; }
-#palette { display:flex; gap:6px; }
-.color-swatch { width:32px; height:32px; border:2px solid #444; border-radius:6px; cursor:pointer;
-  text-align:center; line-height:32px; font-size:12px; color:#fff; user-select:none; }
-.color-swatch.selected { border:2px solid #fff; }
-
-/* More colors popup */
-#more-colors-popup {
-  position:absolute; bottom:90px; left:50%; transform:translateX(-50%);
-  display:flex; flex-wrap:wrap; justify-content:center;
-  width:280px; background:rgba(20,20,20,0.95);
-  border-radius:12px; padding:10px; gap:6px;
-  box-shadow:0 4px 10px rgba(0,0,0,0.5);
-}
-#more-colors-popup.hidden { display:none; }
-
-/* Points display with ring */
-#points-container { position:relative; width:50px; height:50px; }
-#points-display {
-  position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);
-  font-weight:bold; font-size:14px; color:#0f0; text-align:center;
-}
-.progress-ring__bg {
-  fill:transparent; stroke:rgba(255,255,255,0.1); stroke-width:4;
-}
-.progress-ring__progress {
-  fill:transparent; stroke:#0f0; stroke-width:4;
-  stroke-dasharray:138; stroke-dashoffset:138;
-  transform:rotate(-90deg); transform-origin:50% 50%;
-  transition:stroke-dashoffset 0.2s linear, stroke 0.3s;
+#canvas-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
 }
 
-/* Toolbar */
-#toolbar { display:flex; gap:8px; }
-.tool-btn { padding:6px 12px; border:none; border-radius:20px;
-  background:#333; color:white; cursor:pointer; font-weight:bold; font-size:14px; }
-.tool-btn:hover { background:#555; }
+#pixelCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+}
 
-/* Chat */
+/* ===== Chat ===== */
 #chat-popup {
-  position:absolute; bottom:100px; right:20px; width:300px; max-height:50%;
-  background:rgba(30,30,30,0.9); border-radius:12px;
-  display:flex; flex-direction:column; overflow:hidden; z-index:10;
-  box-shadow:0 4px 12px rgba(0,0,0,0.5);
-  transition:height 0.3s ease;
+  position: absolute;
+  right: 20px;
+  bottom: 90px;
+  width: 260px;
+  height: 300px;
+  background: #1c1c1c;
+  border: 2px solid #333;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
-#chat-popup.minimized { height:40px; }
-#chat-toggle {
-  text-align:center; padding:8px; font-weight:bold;
-  color:#fff; cursor:pointer; background:rgba(50,50,50,0.8);
+
+#chat-header {
+  background: #2b2b2b;
+  padding: 8px;
+  cursor: pointer;
+  text-align: center;
+  font-weight: bold;
 }
-#chat-feed { flex:1; padding:8px; overflow-y:auto; color:#fff; }
+
+#chat-feed {
+  flex: 1;
+  padding: 8px;
+  overflow-y: auto;
+  font-size: 14px;
+}
+
 .chat-msg {
-  margin-bottom:6px; padding:6px 10px;
-  background:rgba(68,68,68,0.4); border-radius:8px;
-  word-wrap:break-word; font-size:14px; color:#fff;
+  margin-bottom: 4px;
+  line-height: 1.2em;
 }
-.chat-input {
-  display:flex; padding:6px; gap:6px;
-  border-top:1px solid rgba(51,51,51,0.5);
+
+#chat-input-container {
+  display: flex;
+  border-top: 1px solid #333;
 }
-.chat-input input {
-  flex:1; padding:6px 10px; border-radius:6px; border:none;
-  background:rgba(17,17,17,0.6); color:#fff; font-size:14px;
+
+#chat-message {
+  flex: 1;
+  padding: 6px;
+  border: none;
+  outline: none;
+  background: #111;
+  color: #fff;
 }
-.chat-input button {
-  padding:6px 12px; border:none; border-radius:6px;
-  background:#555; color:white; cursor:pointer; font-size:14px;
+
+#send-message {
+  padding: 6px 10px;
+  background: #444;
+  border: none;
+  cursor: pointer;
+  color: #fff;
 }
-.chat-input button:hover { background:#777; }
+
+#send-message:hover {
+  background: #666;
+}
+
+/* ===== Bottom Bar ===== */
+#bottom-bar {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 70px;
+  background: rgba(20,20,20,0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 0 15px;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.6);
+  border-radius: 20px 20px 0 0;
+}
+
+/* ===== Points Progress Ring ===== */
+#points-wrapper {
+  position: relative;
+  width: 60px;
+  height: 60px;
+}
+
+#points-ring {
+  transform: rotate(-90deg);
+}
+
+#points-ring circle {
+  fill: none;
+  stroke-width: 6;
+}
+
+#points-ring .bg {
+  stroke: #333;
+}
+
+#points-ring .progress {
+  stroke: #4cafef;
+  stroke-dasharray: 157;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.3s;
+}
+
+#points-display {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* ===== Palette ===== */
+#palette {
+  display: flex;
+  gap: 6px;
+}
+
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #222;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #000;
+  font-weight: bold;
+}
+
+.color-swatch.selected {
+  border: 2px solid #fff;
+}
+
+#more-colors {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: #666;
+  color: #fff;
+  cursor: pointer;
+}
+
+#more-colors-popup {
+  position: absolute;
+  bottom: 80px;
+  background: #1e1e1e;
+  border: 2px solid #444;
+  border-radius: 12px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(6, 28px);
+  gap: 6px;
+}
+
+.hidden {
+  display: none;
+}
+
+/* ===== Controls ===== */
+#controls button {
+  padding: 8px 12px;
+  background: #333;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #fff;
+}
+
+#controls button:hover {
+  background: #555;
+}
