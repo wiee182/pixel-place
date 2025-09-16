@@ -1,50 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pixel Canvas</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="page-bg"></div>
+  <canvas id="pixelCanvas"></canvas>
 
-  <div id="canvas-container">
-    <canvas id="pixelCanvas"></canvas>
+  <!-- Bottom Bar -->
+  <div id="bottom-bar">
+    <div id="palette" class="palette"></div>
+    <button id="more-colors" class="icon-btn">＋</button>
+    <span id="points-display" class="points">6/6</span>
+    <button id="toggle-grid" class="icon-btn">☐</button>
+    <button id="toggle-sound" class="icon-btn">🔊</button>
+  </div>
+
+  <!-- More Colors Popup -->
+  <div id="more-colors-popup" class="popup hidden">
+    <div class="popup-grid">
+      <div class="color-swatch" data-color="#ff0000" style="background:#ff0000"></div>
+      <div class="color-swatch" data-color="#00ff00" style="background:#00ff00"></div>
+      <div class="color-swatch" data-color="#0000ff" style="background:#0000ff"></div>
+      <div class="color-swatch" data-color="#ffff00" style="background:#ffff00"></div>
+      <div class="color-swatch" data-color="#ff00ff" style="background:#ff00ff"></div>
+      <div class="color-swatch" data-color="#00ffff" style="background:#00ffff"></div>
+      <div class="color-swatch" data-color="#ffa500" style="background:#ffa500"></div>
+      <div class="color-swatch" data-color="#800080" style="background:#800080"></div>
+      <div class="color-swatch" data-color="#808000" style="background:#808000"></div>
+      <div class="color-swatch" data-color="#008080" style="background:#008080"></div>
+    </div>
   </div>
 
   <!-- Chat -->
-  <div id="chat-popup" class="minimized">
-    <div id="chat-header" role="button" tabindex="0">
-      <span id="chat-title">Chat</span>
-    </div>
-    <div id="chat-feed" aria-live="polite"></div>
-    <div class="chat-input">
-      <input id="chat-message" type="text" placeholder="Type a message..." />
-      <button id="send-message" aria-label="Send message">Send</button>
+  <div id="chat-popup" class="chat minimized">
+    <div id="chat-header">Chat</div>
+    <div id="chat-feed"></div>
+    <div class="chat-input-area">
+      <input type="text" id="chat-message" placeholder="Type a message...">
+      <button id="send-message">Send</button>
     </div>
   </div>
 
-  <!-- Bottom control bar (centered floating) -->
-  <div id="bottom-bar" role="toolbar" aria-label="Controls">
-    <div id="palette-container">
-      <div id="palette" aria-hidden="false"></div>
-      <button id="color-popup-btn" class="tool-btn" title="More colors">🎨</button>
-      <div id="points-display" aria-live="polite">6/6</div>
-    </div>
-
-    <div id="toolbar">
-      <button id="toggle-grid" class="tool-btn" title="Toggle grid">Grid</button>
-      <button id="toggle-sound" class="tool-btn" title="Toggle sound">🔊</button>
-    </div>
-  </div>
-
-  <!-- Color popup anchored to bottom bar -->
-  <div id="color-popup" class="hidden" aria-hidden="true">
-    <h4>More Colors</h4>
-    <div id="extra-palette"></div>
-  </div>
-
-  <script src="script.js" defer></script>
+  <script src="script.js"></script>
 </body>
 </html>
