@@ -1,7 +1,3 @@
-// ===== Constants =====
-const GRID_SIZE = 10;
-const WORLD_WIDTH = 5000, WORLD_HEIGHT = 5000;
-
 // ===== Canvas Setup =====
 const canvas = document.getElementById("pixelCanvas");
 const ctx = canvas.getContext("2d");
@@ -23,9 +19,7 @@ ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
 
   if (data.type === "init") {
-    // Load chat
     data.chat.forEach(msg => addChatMessage(msg.text));
-    // Load pixels
     data.chunks.forEach(([key, pixels]) => {
       chunks.set(key, pixels);
     });
@@ -50,36 +44,41 @@ ws.onmessage = (event) => {
 function resizeCanvas(){
   canvas.width = canvas.parentElement.clientWidth;
   canvas.height = canvas.parentElement.clientHeight;
-  offsetX = (canvas.width - WORLD_WIDTH)/2;
-  offsetY = (canvas.height - WORLD_HEIGHT)/2;
+  offsetX = (canvas.width - 5000)/2;
+  offsetY = (canvas.height - 5000)/2;
 }
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
-// ===== Draw Grid & Pixels =====
+// ===== Draw Grid =====
 function drawGrid(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = "#000"; // fill background black
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  // draw existing pixels
+  // white canvas block
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0,0,5000,5000);
+
+  // draw pixels
   chunks.forEach(chunk=>{
     chunk.forEach(p=>{
       ctx.fillStyle=p.color;
-      ctx.fillRect(p.x,p.y,GRID_SIZE,GRID_SIZE);
+      ctx.fillRect(p.x,p.y,10,10);
     });
   });
 
-  // draw grid
   if(showGrid){
-    ctx.strokeStyle="#000";
+    ctx.strokeStyle="rgba(0,0,0,0.3)";
     ctx.lineWidth=1/scale;
-    for(let x=0;x<=WORLD_WIDTH;x+=GRID_SIZE){
-      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,WORLD_HEIGHT); ctx.stroke();
+    for(let x=0;x<=5000;x+=10){
+      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,5000); ctx.stroke();
     }
-    for(let y=0;y<=WORLD_HEIGHT;y+=GRID_SIZE){
-      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(WORLD_WIDTH,y); ctx.stroke();
+    for(let y=0;y<=5000;y+=10){
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(5000,y); ctx.stroke();
     }
   }
 
@@ -88,6 +87,8 @@ function drawGrid(){
 
 // ===== Palette =====
 const colors = ["#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100"];
+const extraColors = ["#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff","#ffa500","#800080","#808000","#008080"];
+
 const paletteDiv = document.getElementById("palette");
 colors.forEach((c,i)=>{
   const sw = document.createElement("div");
@@ -95,67 +96,44 @@ colors.forEach((c,i)=>{
   sw.style.background=c;
   sw.dataset.color=c;
   sw.textContent=i;
-  sw.addEventListener("click",()=>{
-    document.querySelectorAll(".color-swatch").forEach(s=>s.classList.remove("selected"));
-    sw.classList.add("selected");
-    currentColor=c;
-  });
+  sw.addEventListener("click",()=>selectColor(sw,c));
   paletteDiv.appendChild(sw);
 });
 document.querySelector(".color-swatch").classList.add("selected");
 
-// ===== Grid Toggle =====
-document.getElementById("toggle-grid").addEventListener("click", ()=>{
-  showGrid = !showGrid;
-  drawGrid();
+function selectColor(sw,color){
+  document.querySelectorAll(".color-swatch").forEach(s=>s.classList.remove("selected"));
+  sw.classList.add("selected");
+  currentColor=color;
+}
+
+// ===== Extra Palette Popup =====
+const colorBtn = document.getElementById("color-popup-btn");
+const colorPopup = document.getElementById("color-popup");
+const extraPalette = document.getElementById("extra-palette");
+
+extraColors.forEach(c=>{
+  const sw = document.createElement("div");
+  sw.className="color-swatch";
+  sw.style.background=c;
+  sw.dataset.color=c;
+  sw.addEventListener("click",()=>selectColor(sw,c));
+  extraPalette.appendChild(sw);
 });
 
-// ===== Sound Toggle =====
-document.getElementById("toggle-sound").addEventListener("click", ()=>{
-  soundEnabled = !soundEnabled;
-});
-
-// ===== Draw Pixel =====
-canvas.addEventListener("click", e=>{
-  if(isDragging) return;
-
-  const rect = canvas.getBoundingClientRect();
-  const worldX = (e.clientX-rect.left-offsetX)/scale;
-  const worldY = (e.clientY-rect.top-offsetY)/scale;
-  const x = Math.max(0, Math.min(WORLD_WIDTH-GRID_SIZE, Math.floor(worldX/GRID_SIZE)*GRID_SIZE));
-  const y = Math.max(0, Math.min(WORLD_HEIGHT-GRID_SIZE, Math.floor(worldY/GRID_SIZE)*GRID_SIZE));
-
-  ws.send(JSON.stringify({type:"draw", x,y,color:currentColor}));
-});
-
-// ===== Pan =====
-canvas.addEventListener("mousedown", e=>{isDragging=true; dragStartX=e.clientX-offsetX; dragStartY=e.clientY-offsetY;});
-canvas.addEventListener("mousemove", e=>{if(isDragging){offsetX=e.clientX-dragStartX; offsetY=e.clientY-dragStartY; drawGrid();}});
-canvas.addEventListener("mouseup", ()=>{isDragging=false;});
-canvas.addEventListener("mouseleave", ()=>{isDragging=false;});
-
-// ===== Zoom =====
-canvas.addEventListener("wheel", e=>{
-  e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX-rect.left-offsetX)/scale;
-  const my = (e.clientY-rect.top-offsetY)/scale;
-  const zoom = e.deltaY<0?1.1:0.9;
-  const newScale = Math.min(Math.max(0.1, scale*zoom),5);
-  offsetX -= (mx*(newScale-scale));
-  offsetY -= (my*(newScale-scale));
-  scale=newScale;
-  drawGrid();
+colorBtn.addEventListener("click", ()=>{
+  colorPopup.classList.toggle("hidden");
 });
 
 // ===== Chat =====
 const chatPopup = document.getElementById("chat-popup");
+const chatHeader = document.getElementById("chat-header");
 const chatToggle = document.getElementById("chat-toggle");
 const chatFeed = document.getElementById("chat-feed");
 const chatInput = document.getElementById("chat-message");
 const sendBtn = document.getElementById("send-message");
 
-chatToggle.addEventListener("click", () => {
+chatHeader.addEventListener("click", ()=>{
   chatPopup.classList.toggle("minimized");
   chatToggle.textContent = chatPopup.classList.contains("minimized") ? "▲" : "▼";
 });

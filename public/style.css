@@ -23,6 +23,7 @@ body, html { height:100%; overflow:hidden; font-family:Arial,sans-serif; backgro
   display:flex; justify-content:space-between; align-items:center;
   padding:10px; font-weight:bold; color:#fff; 
   background:rgba(255,255,255,0.1);
+  cursor:pointer;
 }
 #chat-header button {
   background:none; border:none; color:#fff; font-size:14px;
@@ -114,3 +115,22 @@ body, html { height:100%; overflow:hidden; font-family:Arial,sans-serif; backgro
   background:rgba(255,255,255,0.25);
   transform:scale(1.05);
 }
+
+/* Color Popup */
+#color-popup {
+  position:absolute;
+  bottom:100px;
+  left:50%;
+  transform:translateX(-50%);
+  background:rgba(20,20,20,0.9);
+  backdrop-filter:blur(12px);
+  border-radius:16px;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  z-index:30;
+  box-shadow:0 4px 25px rgba(0,0,0,0.6);
+}
+#color-popup.hidden { display:none; }
+#extra-palette { display:grid; grid-template-columns:repeat(auto-fill,36px); gap:8px; }

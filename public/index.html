@@ -18,7 +18,7 @@
   <!-- Floating Chat -->
   <div id="chat-popup" class="minimized">
     <div id="chat-header">
-      <span>Community Chat</span>
+      <span>Chat</span>
       <button id="chat-toggle">▲</button>
     </div>
     <div id="chat-feed"></div>
@@ -32,7 +32,7 @@
   <div id="bottom-bar">
     <div id="palette-container">
       <div id="palette"></div>
-      <button id="more-colors">More</button>
+      <button id="color-popup-btn">🎨</button>
       <div id="points-display">6/6</div>
     </div>
     <div id="toolbar">
@@ -41,8 +41,11 @@
     </div>
   </div>
 
-  <!-- More Colors Popup -->
-  <div id="more-colors-popup" class="hidden"></div>
+  <!-- Color Popup -->
+  <div id="color-popup" class="hidden">
+    <h3>More Colors</h3>
+    <div id="extra-palette"></div>
+  </div>
 
   <script src="script.js"></script>
 </body>
