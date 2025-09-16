@@ -12,6 +12,7 @@ const ctx = canvas.getContext("2d");
 
 let scale = 1, offsetX = 0, offsetY = 0;
 let isDragging = false, dragStartX = 0, dragStartY = 0;
+let pinchStartDist = null, pinchStartScale = 1;
 
 let currentColor = "#fffefe";
 let showGrid = true;
@@ -21,22 +22,15 @@ const chunks = new Map();
 const colors = ["#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100"];
 const paletteDiv = document.getElementById("palette");
 const toggleGridBtn = document.getElementById("toggle-grid");
-const chatPopup = document.getElementById("chat-popup");
-const chatToggle = document.getElementById("chat-toggle");
-const chatFeed = document.getElementById("chat-feed");
-const chatInput = document.getElementById("chat-message");
-const sendBtn = document.getElementById("send-message");
 const pointsDisplay = document.getElementById("points-display");
-const toggleSoundBtn = document.getElementById("toggle-sound");
-
 let userPoints = 6;
 let lastActionTime = Date.now();
-let soundEnabled = true;
 
 // ===== Audio =====
-const drawAudio = new Audio('sounds/draw.mp3'); drawAudio.volume = 0.2;
-const pointAudio = new Audio('sounds/point.mp3'); pointAudio.volume = 0.3;
-function playSound(audio){ if(!soundEnabled) return; const s = audio.cloneNode(); s.play(); }
+let soundEnabled = true;
+const drawAudio = new Audio('sounds/draw.mp3'); drawAudio.volume=0.2;
+const pointAudio = new Audio('sounds/point.mp3'); pointAudio.volume=0.3;
+function playSound(audio){ if(!soundEnabled) return; audio.cloneNode().play(); }
 
 // ===== WebSocket =====
 const wsProtocol = location.protocol==="https:"?"wss":"ws";
@@ -185,12 +179,14 @@ canvas.addEventListener("click", e=>{
   updatePointsDisplay();
 });
 
-// ===== Floating Chat =====
-function appendChat(message){
-  const msg = document.createElement("div");
-  msg.className="chat-msg"; msg.textContent=message;
-  chatFeed.appendChild(msg); chatFeed.scrollTop=chatFeed.scrollHeight;
-}
+// ===== Chat =====
+const chatPopup = document.getElementById("chat-popup");
+const chatFeed = document.getElementById("chat-feed");
+const chatInput = document.getElementById("chat-message");
+const sendBtn = document.getElementById("send-message");
+const chatToggle = document.getElementById("chat-toggle");
+const chatToggleText = document.getElementById("chat-toggle-text");
+
 sendBtn.addEventListener("click", sendMessage);
 chatInput.addEventListener("keydown", e=>{if(e.key==="Enter"){sendMessage(); e.preventDefault();}});
 function sendMessage(){
@@ -199,16 +195,25 @@ function sendMessage(){
   ws.send(JSON.stringify({type:'chat', message:text}));
   chatInput.value='';
 }
+function appendChat(message){
+  const msg = document.createElement("div");
+  msg.className="chat-msg"; msg.textContent=message;
+  chatFeed.appendChild(msg); chatFeed.scrollTop=chatFeed.scrollHeight;
+}
 
-// ===== Show/Hide Chat =====
-chatToggle.addEventListener("click",()=>{
+// ===== Chat Minimize Toggle =====
+chatToggle.addEventListener("click", ()=>{
   chatPopup.classList.toggle("hidden");
 });
 
-// ===== Toggle Sound =====
-toggleSoundBtn.addEventListener("click",()=>{soundEnabled=!soundEnabled; toggleSoundBtn.textContent=soundEnabled?"🔊":"🔇";});
+// ===== Sound Toggle =====
+const toggleSoundBtn = document.getElementById("toggle-sound");
+toggleSoundBtn.addEventListener("click", ()=>{
+  soundEnabled = !soundEnabled;
+  toggleSoundBtn.textContent = soundEnabled ? "🔊":"🔇";
+});
 
-// ===== Points Display =====
+// ===== Points Display Update =====
 function updatePointsDisplay(){
   if(userPoints>0){ pointsDisplay.style.color="#0f0"; pointsDisplay.textContent=`${userPoints}/6`; }
   else{ const now=Date.now(); const timeLeft=Math.max(0,Math.ceil((30000-(now-lastActionTime))/1000)); pointsDisplay.style.color="#f00"; pointsDisplay.textContent=`0/6 ${timeLeft}s`; }
