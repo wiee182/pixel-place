@@ -1,4 +1,4 @@
-/* Background */
+/* Body */
 body {
   margin: 0;
   background: #111;
@@ -52,14 +52,14 @@ body {
   color: #fff;
 }
 
-/* Palette */
+/* Palette cube */
 #palette-container {
   position: relative;
 }
 .color-swatch {
   width: 50px;
   height: 50px;
-  border-radius: 50%;
+  border-radius: 8px; /* cube shape */
   cursor: pointer;
   border: 2px solid transparent;
   position: relative;
@@ -72,11 +72,11 @@ body {
   transition: all 0.2s ease, transform 0.2s ease, box-shadow 0.3s ease;
 }
 .color-swatch.selected, .color-swatch:hover {
-  transform: scale(1.2);
-  box-shadow: 0 0 15px rgba(0,170,255,0.6), 0 0 25px rgba(0,255,170,0.3);
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(0,170,255,0.5), 0 0 25px rgba(0,255,170,0.3);
 }
 
-/* Points inside swatch */
+/* Points inside cube */
 #points-display {
   position: absolute;
   top: 4px;
@@ -86,18 +86,21 @@ body {
   color: #00ff9d;
 }
 
-/* Cooldown ring around color */
+/* Cooldown cube border */
 #cooldown-ring {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 50px;
-  height: 50px;
-  transform: rotate(-90deg);
+  top: -4px;
+  left: -4px;
+  width: 58px;
+  height: 58px;
+  border: 3px solid #00ffff;
+  box-sizing: border-box;
   pointer-events: none;
+  border-radius: 10px; /* slightly rounded cube */
+  transform-origin: center;
 }
 
-/* Popup */
+/* Popup colors cube */
 #more-colors-popup {
   position: absolute;
   bottom: 60px;

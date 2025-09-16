@@ -1,57 +1,59 @@
 // ===== Canvas Setup =====
-const canvas = document.getElementById("pixelCanvas");
-const ctx = canvas.getContext("2d");
-let scale = 1, offsetX = 0, offsetY = 0;
-let isDragging = false, dragStartX = 0, dragStartY = 0;
-const GRID_SIZE = 10, WORLD_WIDTH = 5000, WORLD_HEIGHT = 5000;
-const chunks = new Map();
+const canvas=document.getElementById("pixelCanvas");
+const ctx=canvas.getContext("2d");
+let scale=1, offsetX=0, offsetY=0;
+let isDragging=false, dragStartX=0, dragStartY=0;
+const GRID_SIZE=10, WORLD_WIDTH=5000, WORLD_HEIGHT=5000;
+const chunks=new Map();
 
 // ===== Colors =====
-const colors = [
-  "#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100",
-  "#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff",
-  "#ffa500","#800080","#008000","#00ced1","#ff1493","#ffd700",
-  "#a52a2a","#808000"
-];
-let currentColor = colors[0];
+const colors=["#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100",
+"#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff","#ffa500","#800080",
+"#008000","#00ced1","#ff1493","#ffd700","#a52a2a","#808000"];
+let currentColor=colors[0];
 
 // ===== Palette + Points =====
-const paletteDiv = document.getElementById("palette");
-const moreColorsPopup = document.getElementById("more-colors-popup");
-const moreBtn = document.getElementById("more-colors");
+const paletteDiv=document.getElementById("palette");
+const moreColorsPopup=document.getElementById("more-colors-popup");
+const moreBtn=document.getElementById("more-colors");
 
-// Main swatch
-const mainSwatch = document.createElement("div");
-mainSwatch.className = "color-swatch selected";
-mainSwatch.style.background = currentColor;
-mainSwatch.innerHTML = `<span id="points-display">${6}/6</span>`;
+// Main cube swatch
+const mainSwatch=document.createElement("div");
+mainSwatch.className="color-swatch selected";
+mainSwatch.style.background=currentColor;
+mainSwatch.innerHTML=`<span id="points-display">6/6</span>`;
 paletteDiv.appendChild(mainSwatch);
 
-// Cooldown ring
-const cooldownRing = document.createElementNS("http://www.w3.org/2000/svg","svg");
+// Cooldown cube border
+const cooldownRing=document.createElement("div");
 cooldownRing.setAttribute("id","cooldown-ring");
-cooldownRing.setAttribute("width","50");
-cooldownRing.setAttribute("height","50");
-cooldownRing.innerHTML = `
-  <circle id="ring-bg" cx="25" cy="25" r="22" stroke="#333" stroke-width="4" fill="none"/>
-  <circle id="ring-progress" cx="25" cy="25" r="22" stroke="#00ffff" stroke-width="4" fill="none" stroke-dasharray="138" stroke-dashoffset="138"/>
-`;
 mainSwatch.appendChild(cooldownRing);
-const ringProgress = cooldownRing.querySelector("#ring-progress");
 
-// Popup colors
+function updateRing(){
+    const ratio=points/MAX_POINTS;
+    cooldownRing.style.transform=`scale(${1+0.2*(1-ratio)})`;
+    cooldownRing.style.opacity=`${0.3+0.7*ratio}`;
+}
+function updatePoints(p){
+    points=p;
+    mainSwatch.querySelector("#points-display").textContent=`${points}/${MAX_POINTS}`;
+    updateRing();
+}
+setInterval(updateRing,50);
+
+// Popup colors cube
 colors.forEach(c=>{
-  const sw=document.createElement("div");
-  sw.className="color-swatch";
-  sw.style.background=c;
-  sw.addEventListener("click",()=>{
-    currentColor=c;
-    mainSwatch.style.background=c;
-    moreColorsPopup.querySelectorAll(".color-swatch").forEach(s=>s.classList.remove("selected"));
-    sw.classList.add("selected");
-    moreColorsPopup.classList.remove("show");
-  });
-  moreColorsPopup.appendChild(sw);
+    const sw=document.createElement("div");
+    sw.className="color-swatch";
+    sw.style.background=c;
+    sw.addEventListener("click",()=>{
+        currentColor=c;
+        mainSwatch.style.background=c;
+        moreColorsPopup.querySelectorAll(".color-swatch").forEach(s=>s.classList.remove("selected"));
+        sw.classList.add("selected");
+        moreColorsPopup.classList.remove("show");
+    });
+    moreColorsPopup.appendChild(sw);
 });
 moreBtn.addEventListener("click",e=>{e.stopPropagation();moreColorsPopup.classList.toggle("show");});
 document.addEventListener("click",e=>{if(!moreColorsPopup.contains(e.target)&&e.target!==moreBtn)moreColorsPopup.classList.remove("show");});
@@ -71,8 +73,6 @@ function sendMessage(){const text=chatInput.value.trim();if(!text)return;ws.send
 // ===== Points + Cooldown =====
 const MAX_POINTS=6;
 let points=MAX_POINTS,lastPlaceTime=Date.now(),COOLDOWN=20000;
-function updateRing(){const ratio=points/MAX_POINTS;const circumference=2*Math.PI*22;ringProgress.style.strokeDasharray=circumference;ringProgress.style.strokeDashoffset=circumference*(1-ratio);}
-function updatePoints(p){points=p;mainSwatch.querySelector("#points-display").textContent=`${points}/${MAX_POINTS}`;updateRing();}
 setInterval(()=>{const now=Date.now();if(points<MAX_POINTS && now-lastPlaceTime>=COOLDOWN){points++;updatePoints(points);lastPlaceTime=now;}},1000);
 
 // ===== Audio & Grid =====
@@ -92,10 +92,20 @@ ws.onmessage=event=>{const data=JSON.parse(event.data);
 };
 
 // ===== Pixel Helpers =====
-function setPixel(x,y,color){const key=`${Math.floor(x/100)},${Math.floor(y/100)}`;if(!chunks.has(key)) chunks.set(key,[]);const chunk=chunks.get(key);const idx=chunk.findIndex(p=>p.x===x&&p.y===y);if(idx>=0) chunk[idx].color=color;else chunk.push({x,y,color});}
+function setPixel(x,y,color){const key=`${Math.floor(x/100)},${Math.floor(y/100)}`;if(!chunks.has(key)) chunks.set(key,[]);const chunk=chunks.get(key);const idx=chunk.findIndex(p=>p.x===x&&p.y===y);if(idx>=0)chunk[idx].color=color;else chunk.push({x,y,color});}
 
-// ===== Drawing =====
-canvas.addEventListener("click",e=>{if(isDragging||points<=0)return;const rect=canvas.getBoundingClientRect();const worldX=(e.clientX-rect.left-offsetX)/scale;const worldY=(e.clientY-rect.top-offsetY)/scale;const x=Math.max(0,Math.min(WORLD_WIDTH-GRID_SIZE,Math.floor(worldX/GRID_SIZE)*GRID_SIZE));const y=Math.max(0,Math.min(WORLD_HEIGHT-GRID_SIZE,Math.floor(worldY/GRID_SIZE)*GRID_SIZE));ws.send(JSON.stringify({type:"draw",x,y,color:currentColor,user:"anon"}));if(soundEnabled)drawAudio.cloneNode().play();points=Math.max(0,points-1);lastPlaceTime=Date.now();updatePoints(points);});
+// ===== Canvas Drawing =====
+canvas.addEventListener("click",e=>{
+  if(isDragging)return;
+  const rect=canvas.getBoundingClientRect();
+  const worldX=(e.clientX-rect.left-offsetX)/scale;
+  const worldY=(e.clientY-rect.top-offsetY)/scale;
+  const x=Math.max(0,Math.min(WORLD_WIDTH-GRID_SIZE,Math.floor(worldX/GRID_SIZE)*GRID_SIZE));
+  const y=Math.max(0,Math.min(WORLD_HEIGHT-GRID_SIZE,Math.floor(worldY/GRID_SIZE)*GRID_SIZE));
+  if(points<=0){return;}
+  points--;updatePoints(points);lastPlaceTime=Date.now();
+  ws.send(JSON.stringify({type:"draw",x,y,color:currentColor,user:"anon"}));
+});
 
 // Pan & Zoom
 canvas.addEventListener("mousedown",e=>{isDragging=true;dragStartX=e.clientX-offsetX;dragStartY=e.clientY-offsetY;});
