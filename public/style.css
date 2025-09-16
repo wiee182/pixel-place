@@ -1,4 +1,4 @@
-/* Body */
+/* Body & Canvas */
 body {
   margin: 0;
   background: #111;
@@ -9,8 +9,6 @@ body {
   overflow: hidden;
   font-family: 'Segoe UI', sans-serif;
 }
-
-/* Canvas */
 #pixelCanvas {
   background: #fff;
   box-shadow: 0 25px 50px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.5);
@@ -29,27 +27,24 @@ body {
   align-items: center;
   gap: 12px;
   background: linear-gradient(135deg, #222, #444);
-  padding: 14px 24px;
+  padding: 12px 20px;
   border-radius: 30px;
   box-shadow: 0 8px 25px rgba(0,0,0,0.6);
   z-index: 10;
 }
-
-/* Buttons */
 #bottom-bar button {
   border: none;
   border-radius: 12px;
-  padding: 10px 16px;
+  padding: 8px 12px;
   background: #555;
   color: #fff;
-  font-weight: bold;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 #bottom-bar button:hover {
   transform: scale(1.15);
   background: #00aaff;
-  color: #fff;
 }
 
 /* Palette cube */
@@ -57,9 +52,9 @@ body {
   position: relative;
 }
 .color-swatch {
-  width: 50px;
-  height: 50px;
-  border-radius: 8px; /* cube shape */
+  width: 35px;  /* smaller cube */
+  height: 35px;
+  border-radius: 6px;
   cursor: pointer;
   border: 2px solid transparent;
   position: relative;
@@ -68,55 +63,53 @@ body {
   justify-content: center;
   font-weight: bold;
   color: #00ff9d;
-  font-size: 14px;
+  font-size: 12px;
   transition: all 0.2s ease, transform 0.2s ease, box-shadow 0.3s ease;
 }
 .color-swatch.selected, .color-swatch:hover {
   transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(0,170,255,0.5), 0 0 25px rgba(0,255,170,0.3);
+  box-shadow: 0 0 10px rgba(0,170,255,0.5), 0 0 20px rgba(0,255,170,0.3);
 }
-
 /* Points inside cube */
 #points-display {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  font-size: 14px;
+  top: 2px;
+  right: 2px;
+  font-size: 12px;
   font-weight: bold;
   color: #00ff9d;
 }
-
 /* Cooldown cube border */
 #cooldown-ring {
   position: absolute;
-  top: -4px;
-  left: -4px;
-  width: 58px;
-  height: 58px;
-  border: 3px solid #00ffff;
+  top: -3px;
+  left: -3px;
+  width: 41px;
+  height: 41px;
+  border: 2px solid #00ffff;
   box-sizing: border-box;
   pointer-events: none;
-  border-radius: 10px; /* slightly rounded cube */
+  border-radius: 6px;
   transform-origin: center;
 }
 
 /* Popup colors cube */
 #more-colors-popup {
   position: absolute;
-  bottom: 60px;
+  bottom: 45px;
   left: 0;
-  max-height: 220px;
-  width: 240px;
+  max-height: 180px;
+  width: 210px;
   overflow-y: auto;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
   background: linear-gradient(145deg, #333, #555);
-  padding: 12px;
-  border-radius: 14px;
+  padding: 10px;
+  border-radius: 12px;
   box-shadow: 0 8px 20px rgba(0,0,0,0.5);
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(8px);
   transition: all 0.25s ease;
   pointer-events: none;
   z-index: 15;
@@ -186,6 +179,4 @@ body {
   cursor: pointer;
   font-weight: bold;
 }
-#send-message:hover {
-  background: #00ffea;
-}
+#send-message:hover {background:#00ffea;}

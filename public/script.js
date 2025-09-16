@@ -1,9 +1,9 @@
 // ===== Canvas Setup =====
 const canvas=document.getElementById("pixelCanvas");
 const ctx=canvas.getContext("2d");
-let scale=1, offsetX=0, offsetY=0;
-let isDragging=false, dragStartX=0, dragStartY=0;
-const GRID_SIZE=10, WORLD_WIDTH=5000, WORLD_HEIGHT=5000;
+let scale=1,offsetX=0,offsetY=0;
+let isDragging=false,dragStartX=0,dragStartY=0;
+const GRID_SIZE=10,WORLD_WIDTH=5000,WORLD_HEIGHT=5000;
 const chunks=new Map();
 
 // ===== Colors =====
@@ -12,16 +12,18 @@ const colors=["#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100",
 "#008000","#00ced1","#ff1493","#ffd700","#a52a2a","#808000"];
 let currentColor=colors[0];
 
-// ===== Palette + Points =====
+// ===== Points + Palette =====
+const MAX_POINTS=10;
+let points=MAX_POINTS,lastPlaceTime=Date.now(),COOLDOWN=20000;
 const paletteDiv=document.getElementById("palette");
 const moreColorsPopup=document.getElementById("more-colors-popup");
 const moreBtn=document.getElementById("more-colors");
 
-// Main cube swatch
+// Main cube
 const mainSwatch=document.createElement("div");
 mainSwatch.className="color-swatch selected";
 mainSwatch.style.background=currentColor;
-mainSwatch.innerHTML=`<span id="points-display">6/6</span>`;
+mainSwatch.innerHTML=`<span id="points-display">${points}/${MAX_POINTS}</span>`;
 paletteDiv.appendChild(mainSwatch);
 
 // Cooldown cube border
@@ -29,16 +31,9 @@ const cooldownRing=document.createElement("div");
 cooldownRing.setAttribute("id","cooldown-ring");
 mainSwatch.appendChild(cooldownRing);
 
-function updateRing(){
-    const ratio=points/MAX_POINTS;
-    cooldownRing.style.transform=`scale(${1+0.2*(1-ratio)})`;
-    cooldownRing.style.opacity=`${0.3+0.7*ratio}`;
-}
-function updatePoints(p){
-    points=p;
-    mainSwatch.querySelector("#points-display").textContent=`${points}/${MAX_POINTS}`;
-    updateRing();
-}
+// Update points & ring
+function updatePoints(p){points=p;mainSwatch.querySelector("#points-display").textContent=`${points}/${MAX_POINTS}`;updateRing();}
+function updateRing(){const ratio=points/MAX_POINTS;cooldownRing.style.transform=`scale(${1+0.2*(1-ratio)})`;cooldownRing.style.opacity=`${0.3+0.7*ratio}`;}
 setInterval(updateRing,50);
 
 // Popup colors cube
@@ -70,11 +65,6 @@ sendBtn.addEventListener("click",sendMessage);
 chatInput.addEventListener("keydown",e=>{if(e.key==="Enter"){sendMessage();e.preventDefault();}});
 function sendMessage(){const text=chatInput.value.trim();if(!text)return;ws.send(JSON.stringify({type:"chat",user:"anon",message:text}));chatInput.value="";}
 
-// ===== Points + Cooldown =====
-const MAX_POINTS=6;
-let points=MAX_POINTS,lastPlaceTime=Date.now(),COOLDOWN=20000;
-setInterval(()=>{const now=Date.now();if(points<MAX_POINTS && now-lastPlaceTime>=COOLDOWN){points++;updatePoints(points);lastPlaceTime=now;}},1000);
-
 // ===== Audio & Grid =====
 const drawAudio=document.getElementById("draw-sound");
 let soundEnabled=true,showGrid=true;
@@ -96,13 +86,12 @@ function setPixel(x,y,color){const key=`${Math.floor(x/100)},${Math.floor(y/100)
 
 // ===== Canvas Drawing =====
 canvas.addEventListener("click",e=>{
-  if(isDragging)return;
+  if(isDragging||points<=0)return;
   const rect=canvas.getBoundingClientRect();
   const worldX=(e.clientX-rect.left-offsetX)/scale;
   const worldY=(e.clientY-rect.top-offsetY)/scale;
   const x=Math.max(0,Math.min(WORLD_WIDTH-GRID_SIZE,Math.floor(worldX/GRID_SIZE)*GRID_SIZE));
   const y=Math.max(0,Math.min(WORLD_HEIGHT-GRID_SIZE,Math.floor(worldY/GRID_SIZE)*GRID_SIZE));
-  if(points<=0){return;}
   points--;updatePoints(points);lastPlaceTime=Date.now();
   ws.send(JSON.stringify({type:"draw",x,y,color:currentColor,user:"anon"}));
 });
@@ -119,13 +108,8 @@ function resizeCanvas(){canvas.width=canvas.parentElement.clientWidth;canvas.hei
 window.addEventListener("resize",resizeCanvas);resizeCanvas();
 
 // Draw Loop
-function drawGrid(){
-  ctx.fillStyle="#fff";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.save();ctx.translate(offsetX,offsetY);ctx.scale(scale,scale);
-  chunks.forEach(chunk=>{chunk.forEach(p=>{ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,GRID_SIZE,GRID_SIZE);});});
-  if(showGrid){ctx.strokeStyle="#ccc";ctx.lineWidth=1/scale;for(let x=0;x<=WORLD_WIDTH;x+=GRID_SIZE){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,WORLD_HEIGHT);ctx.stroke();}for(let y=0;y<=WORLD_HEIGHT;y+=GRID_SIZE){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(WORLD_WIDTH,y);ctx.stroke();}}
-  ctx.restore();
-}
-function animate(){drawGrid();requestAnimationFrame(animate);}
-animate();
+function drawGrid(){ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.save();ctx.translate(offsetX,offsetY);ctx.scale(scale,scale);chunks.forEach(chunk=>{chunk.forEach(p=>{ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,GRID_SIZE,GRID_SIZE);});});if(showGrid){ctx.strokeStyle="#ccc";ctx.lineWidth=1/scale;for(let x=0;x<=WORLD_WIDTH;x+=GRID_SIZE){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,WORLD_HEIGHT);ctx.stroke();}for(let y=0;y<=WORLD_HEIGHT;y+=GRID_SIZE){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(WORLD_WIDTH,y);ctx.stroke();}}ctx.restore();}
+function animate(){drawGrid();requestAnimationFrame(animate);}animate();
+
+// Cooldown regen
+setInterval(()=>{const now=Date.now();if(points<MAX_POINTS && now-lastPlaceTime>=COOLDOWN){points++;updatePoints(points);lastPlaceTime=now;}},1000);
