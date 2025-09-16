@@ -52,7 +52,6 @@ function drawGrid(){
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  // draw existing pixels
   chunks.forEach(chunk=>{
     chunk.forEach(p=>{
       ctx.fillStyle=p.color;
@@ -60,7 +59,6 @@ function drawGrid(){
     });
   });
 
-  // draw grid
   if(showGrid){
     ctx.strokeStyle="#000";
     ctx.lineWidth=1/scale;
@@ -108,6 +106,9 @@ document.getElementById("toggle-sound").addEventListener("click", ()=>{
 // ===== Chat Toggle =====
 chatToggle.addEventListener("click", ()=>{
   chatPopup.classList.toggle("minimized");
+  chatToggle.innerHTML = chatPopup.classList.contains("minimized")
+    ? '<i class="fas fa-chevron-up"></i>'
+    : '<i class="fas fa-chevron-down"></i>';
 });
 
 // ===== More Colors =====
