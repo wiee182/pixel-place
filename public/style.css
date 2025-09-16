@@ -1,51 +1,49 @@
 /* Reset */
 * { margin:0; padding:0; box-sizing:border-box; }
 body, html { height:100%; overflow:hidden; font-family:Arial,sans-serif; background:#000; }
+#page-bg { position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:-1; }
 
 /* Canvas */
 #canvas-container { position:relative; width:100%; height:100%; overflow:hidden; }
-#pixelCanvas { position:absolute; top:0; left:0; width:100%; height:100%; image-rendering:pixelated; background:#fff; cursor:crosshair; }
+#pixelCanvas { position:absolute; top:0; left:0; width:100%; height:100%; background:#fff; cursor:crosshair; image-rendering:pixelated; }
 
 /* Bottom Toolbar */
 #bottom-bar {
   position:absolute; bottom:0; left:0; right:0;
-  background: rgba(20,20,20,0.95); display:flex; justify-content:space-between; align-items:center;
+  background: rgba(20,20,20,0.95);
+  display:flex; justify-content:space-between; align-items:center;
   padding:8px; border-top:2px solid #333; gap:10px; flex-wrap:wrap;
+  overflow:visible;
 }
 
-/* Palette container */
-#palette-container { display:flex; align-items:center; gap:8px; overflow-x:auto; }
+/* Palette */
+#palette-container { display:flex; align-items:center; gap:8px; }
 #palette { display:flex; gap:4px; }
-.color-swatch { width:36px; height:36px; border:2px solid #444; border-radius:4px; cursor:pointer; text-align:center; line-height:36px; font-size:12px; color:#fff; user-select:none; }
+.color-swatch { width:36px; height:36px; border:2px solid #444; border-radius:4px; cursor:pointer;
+  text-align:center; line-height:36px; font-size:12px; color:#fff; user-select:none; }
 .color-swatch.selected { border:2px solid #fff; }
 
-/* Points display */
-#points-display { font-weight:bold; min-width:60px; text-align:center; font-size:14px; }
+/* More colors popup */
+#more-colors-popup {
+  position:absolute; bottom:50px; left:10px; display:flex; flex-wrap:wrap;
+  width:250px; background:rgba(20,20,20,0.95); border-radius:8px; padding:6px; gap:4px;
+}
+#more-colors-popup.hidden { display:none; }
 
-/* Toolbar */
-#toolbar { display:flex; gap:8px; flex-wrap:wrap; }
+/* Points display */
+#points-display { font-weight:bold; min-width:60px; text-align:center; font-size:14px; color:#0f0; }
+
+/* Toolbar buttons */
+#toolbar { display:flex; gap:8px; }
 .tool-btn { padding:6px 10px; border:none; border-radius:6px; background:#333; color:white; cursor:pointer; font-weight:bold; font-size:14px; }
 .tool-btn:hover { background:#555; }
 
-/* More Colors Popup */
-#more-colors-popup {
-  position:absolute; bottom:50px; left:10px; width:300px; max-height:200px;
-  background: rgba(50,50,50,0.95); border-radius:12px; display:flex; flex-wrap:wrap; gap:4px;
-  padding:8px; overflow-y:auto; z-index:15;
-  transform: translateY(20px);
-  opacity: 0;
-  transition: all 0.3s ease;
-}
-#more-colors-popup.show { transform: translateY(0); opacity:1; }
-#more-colors-popup.hidden { display:none; }
-
 /* Floating Chat */
-#chat-popup {
-  position:absolute; bottom:70px; right:10px; width:300px; max-height:50%;
-  background: rgba(30,30,30,0.2); border-radius:12px; display:flex; flex-direction:column; overflow:hidden; z-index:10;
-  transition: all 0.3s ease;
-}
-#chat-toggle { text-align:center; padding:6px; font-weight:bold; color:#fff; cursor:pointer; background:rgba(50,50,50,0.3); }
+#chat-popup { position:absolute; bottom:70px; right:10px; width:300px; max-height:50%;
+  background: rgba(30,30,30,0.2); border-radius:12px; display:flex; flex-direction:column;
+  overflow:hidden; z-index:10; transition: all 0.3s ease; }
+#chat-popup.minimized { height:40px; }
+#chat-toggle { text-align:center; padding:6px; font-weight:bold; color:#fff; cursor:pointer; background:rgba(50,50,50,0.3); border-radius:6px; }
 #chat-feed { flex:1; padding:8px; overflow-y:auto; color:#fff; }
 .chat-msg { margin-bottom:6px; padding:6px 8px; background: rgba(68,68,68,0.3); border-radius:8px; word-wrap:break-word; font-size:14px; color:#fff; }
 .chat-input { display:flex; padding:6px; gap:6px; border-top:1px solid rgba(51,51,51,0.5); }
