@@ -12,7 +12,6 @@ const ctx = canvas.getContext("2d");
 
 let scale = 1, offsetX = 0, offsetY = 0;
 let isDragging = false, dragStartX = 0, dragStartY = 0;
-let pinchStartDist = null, pinchStartScale = 1;
 
 let currentColor = "#fffefe";
 let showGrid = true;
@@ -21,6 +20,7 @@ const chunks = new Map();
 // ===== Palette & Points =====
 const colors = [
   "#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100",
+  "#382314","#7c3f20","#c16f36","#feac6d","#ffd3b0","#fea5d0"
 ];
 
 const paletteDiv = document.getElementById("palette");
@@ -114,7 +114,6 @@ function handleIncomingPixel(p){
   const idx = chunk.findIndex(px=>px.x===p.x && px.y===p.y);
   if(idx>=0) chunk[idx]=p; else chunk.push(p);
 
-  // Pixel pop animation
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
@@ -131,7 +130,7 @@ colors.forEach((c,i)=>{
   sw.style.background=c;
   sw.dataset.color=c;
   sw.textContent=i;
-  sw.addEventListener("click", ()=>{
+  sw.addEventListener("click",()=>{
     document.querySelectorAll(".color-swatch").forEach(s=>s.classList.remove("selected"));
     sw.classList.add("selected");
     currentColor=c;
@@ -205,9 +204,9 @@ function sendMessage(){
   chatInput.value='';
 }
 
-// ===== Chat toggle =====
+// ===== Chat minimize =====
 chatToggle.addEventListener("click", ()=>{
-  chatPopup.classList.toggle("hidden");
+  chatPopup.classList.toggle("minimized");
 });
 
 // ===== Toggle Sound =====
