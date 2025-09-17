@@ -5,33 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pixel Canvas</title>
 <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <canvas id="pixelCanvas"></canvas>
+<canvas id="canvas"></canvas>
 
-  <!-- Bottom Bar -->
-  <div id="bottom-bar">
-    <div id="palette-container">
-      <div id="palette"></div>
-      <button id="more-colors">+</button>
-      <div id="more-colors-popup"></div>
+<div id="bottom-bar">
+  <div id="color-container">
+    <div id="color-square">
+      <div id="cooldown-overlay"></div>
+      <span id="points">10</span>
     </div>
-    <button id="toggle-grid"><i class="fa-solid fa-border-all"></i></button>
-    <button id="toggle-sound"><i class="fa-solid fa-volume-high"></i></button>
+    <button id="more-colors">+</button>
   </div>
-
-  <!-- Chat -->
-  <div id="chat-box">
-    <div id="chat-header">Chat</div>
-    <div id="chat-feed"></div>
-    <div id="chat-input-container">
-      <input type="text" id="chat-message" placeholder="Type a message...">
-      <button id="send-message">Send</button>
-    </div>
+  <div id="bottom-actions">
+    <button id="toggle-grid">☑</button>
   </div>
+</div>
 
-  <audio id="draw-sound" src="sounds/draw.mp3"></audio>
-  <script src="script.js"></script>
+<div id="color-popup" class="hidden"></div>
+<script src="script.js"></script>
 </body>
 </html>

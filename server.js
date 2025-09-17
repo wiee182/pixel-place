@@ -1,179 +1,159 @@
-// ===== Dependencies =====
-const WebSocket = require("ws");
+// server.js
 const express = require("express");
 const http = require("http");
-const Database = require("better-sqlite3");
+const WebSocket = require("ws");
+const { Client } = require("pg");
+const fs = require("fs");
+const path = require("path");
+const { exec } = require("child_process");
+const cron = require("node-cron");
 
-// ===== App Setup =====
 const app = express();
-app.use(express.static("public"));
-
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// ===== Database Setup =====
-const db = new Database("canvas.db");
+app.use(express.static("public"));
 
-// Create tables if not exist
-db.prepare(`
-  CREATE TABLE IF NOT EXISTS pixels (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    x INTEGER,
-    y INTEGER,
-    color TEXT,
-    user TEXT,
-    timestamp INTEGER
-  )
-`).run();
-
-db.prepare(`
-  CREATE TABLE IF NOT EXISTS canvas_state (
-    x INTEGER,
-    y INTEGER,
-    color TEXT,
-    PRIMARY KEY (x,y)
-  )
-`).run();
-
-db.prepare(`
-  CREATE TABLE IF NOT EXISTS chat (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user TEXT,
-    message TEXT,
-    timestamp INTEGER
-  )
-`).run();
-
-// ===== Constants =====
-const WORLD_WIDTH = 5000;
-const WORLD_HEIGHT = 5000;
-const CHUNK_SIZE = 100;
-const MAX_POINTS = 6;
-const COOLDOWN = 20000; // 20s per point
-
-// ===== User Data =====
-const userData = new Map(); // ws => { points, lastRegen }
-
-// ===== Helper Functions =====
-function send(ws, data) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(data));
-  }
-}
-
-function broadcast(data) {
-  const str = JSON.stringify(data);
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(str);
-    }
-  });
-}
-
-// Load initial state
-function loadCanvasState() {
-  const rows = db.prepare("SELECT x,y,color FROM canvas_state").all();
-  return rows;
-}
-
-function loadChatHistory(limit = 50) {
-  return db.prepare("SELECT * FROM chat ORDER BY id DESC LIMIT ?").all(limit).reverse();
-}
-
-// ===== WebSocket Handling =====
-wss.on("connection", (ws) => {
-  userData.set(ws, { points: MAX_POINTS, lastRegen: Date.now() });
-
-  // Send initial data
-  send(ws, {
-    type: "init",
-    canvas: loadCanvasState(),
-    chat: loadChatHistory(),
-    points: MAX_POINTS,
-  });
-
-  ws.on("message", (msg) => {
-    let data;
-    try {
-      data = JSON.parse(msg);
-    } catch {
-      return;
-    }
-
-    const user = userData.get(ws);
-    const now = Date.now();
-
-    // Handle pixel placement
-    if (data.type === "draw") {
-      if (!("x" in data) || !("y" in data) || !("color" in data)) return;
-
-      if (user.points <= 0) {
-        send(ws, { type: "error", message: "No points left. Wait for cooldown." });
-        return;
-      }
-
-      // Deduct point
-      user.points--;
-      user.lastRegen = now;
-
-      // Insert into history
-      db.prepare(
-        "INSERT INTO pixels (x,y,color,user,timestamp) VALUES (?,?,?,?,?)"
-      ).run(data.x, data.y, data.color, data.user || "anon", now);
-
-      // Update current state
-      db.prepare(
-        "INSERT INTO canvas_state (x,y,color) VALUES (?,?,?) ON CONFLICT(x,y) DO UPDATE SET color=excluded.color"
-      ).run(data.x, data.y, data.color);
-
-      // Broadcast to all
-      broadcast({
-        type: "draw",
-        x: data.x,
-        y: data.y,
-        color: data.color,
-      });
-
-      // Update user points
-      send(ws, { type: "points", points: user.points });
-    }
-
-    // Handle chat
-    if (data.type === "chat") {
-      if (!data.message?.trim()) return;
-
-      db.prepare(
-        "INSERT INTO chat (user,message,timestamp) VALUES (?,?,?)"
-      ).run(data.user || "anon", data.message, now);
-
-      const chatMsg = {
-        type: "chat",
-        user: data.user || "anon",
-        message: data.message,
-        timestamp: now,
-      };
-
-      broadcast(chatMsg);
-    }
-  });
-
-  ws.on("close", () => {
-    userData.delete(ws);
-  });
+// PostgreSQL connection
+const client = new Client({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false } // Railway requires this
 });
 
-// Regenerate points every 20s
+client.connect()
+  .then(() => console.log("Connected to PostgreSQL"))
+  .catch(err => console.error("PostgreSQL connection error:", err));
+
+// Create tables if they don't exist
+client.query(`
+CREATE TABLE IF NOT EXISTS pixels (
+  x INT NOT NULL,
+  y INT NOT NULL,
+  color TEXT NOT NULL,
+  PRIMARY KEY(x,y)
+);
+CREATE TABLE IF NOT EXISTS pixel_history (
+  id SERIAL PRIMARY KEY,
+  x INT NOT NULL,
+  y INT NOT NULL,
+  color TEXT NOT NULL,
+  timestamp TIMESTAMPTZ DEFAULT NOW()
+);
+`).then(() => console.log("Tables ready"))
+  .catch(err => console.error("Error creating tables:", err));
+
+// Load current canvas
+async function getCanvas() {
+  const res = await client.query("SELECT x, y, color FROM pixels");
+  return res.rows;
+}
+
+// Save pixel to both current canvas and history
+async function setPixel(x, y, color) {
+  await client.query(
+    `INSERT INTO pixels(x,y,color) VALUES($1,$2,$3)
+     ON CONFLICT(x,y) DO UPDATE SET color = EXCLUDED.color`,
+    [x, y, color]
+  );
+  await client.query(
+    `INSERT INTO pixel_history(x,y,color) VALUES($1,$2,$3)`,
+    [x, y, color]
+  );
+}
+
+// Connected clients
+const clients = new Map();
+
+wss.on("connection", async ws => {
+  ws.send(JSON.stringify({ type: "init", pixels: await getCanvas() }));
+  clients.set(ws, { points: 10, cooldown: 0 });
+
+  ws.on("message", async msg => {
+    let data;
+    try { data = JSON.parse(msg); } catch { return; }
+
+    // Drawing pixels
+    if (data.type === "draw") {
+      const clientData = clients.get(ws);
+      if (!clientData) return;
+
+      if (clientData.points > 0 && clientData.cooldown === 0) {
+        await setPixel(data.x, data.y, data.color);
+        clientData.points--;
+        clientData.cooldown = 20;
+
+        // Broadcast pixel
+        wss.clients.forEach(c => {
+          if (c.readyState === WebSocket.OPEN)
+            c.send(JSON.stringify({ type: "pixel", x: data.x, y: data.y, color: data.color }));
+        });
+
+        ws.send(JSON.stringify({ type: "updatePoints", points: clientData.points, cooldown: clientData.cooldown }));
+      }
+    }
+
+    // Chat messages
+    if (data.type === "chat") {
+      const message = { type: "chat", user: data.user, text: data.text };
+      wss.clients.forEach(c => {
+        if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify(message));
+      });
+    }
+  });
+
+  ws.on("close", () => clients.delete(ws));
+});
+
+// Cooldown timer
 setInterval(() => {
-  const now = Date.now();
-  userData.forEach((user, ws) => {
-    if (user.points < MAX_POINTS && now - user.lastRegen >= COOLDOWN) {
-      user.points++;
-      user.lastRegen = now;
-      send(ws, { type: "points", points: user.points });
+  clients.forEach((clientData, ws) => {
+    if (clientData.cooldown > 0) {
+      clientData.cooldown--;
+      if (clientData.cooldown === 0 && clientData.points < 10) clientData.points++;
+      if (ws.readyState === WebSocket.OPEN)
+        ws.send(JSON.stringify({ type: "updatePoints", points: clientData.points, cooldown: clientData.cooldown }));
     }
   });
 }, 1000);
 
-// ===== Start Server =====
-const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// --- Monthly timelapse + canvas reset ---
+// Runs at 1 AM UTC on the first day of every month
+cron.schedule("0 1 1 * *", async () => {
+  console.log("Starting monthly timelapse generation...");
+
+  // Create folder for frames
+  const framesDir = path.join(__dirname, "frames");
+  if (!fs.existsSync(framesDir)) fs.mkdirSync(framesDir, { recursive: true });
+
+  // Export pixel_history to CSV for FFmpeg
+  const res = await client.query("SELECT * FROM pixel_history ORDER BY timestamp ASC");
+  const pixels = res.rows;
+
+  // Save each frame as PNG
+  // For simplicity, here we just save one PNG snapshot of full canvas
+  // For real timelapse, you can expand this to multiple frames
+  const { createCanvas } = require("canvas");
+  const canvas = createCanvas(1000, 1000); // adjust size
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  pixels.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, 10, 10);
+  });
+
+  const outputPath = path.join(__dirname, `timelapse-${Date.now()}.png`);
+  const out = fs.createWriteStream(outputPath);
+  const stream = canvas.createPNGStream();
+  stream.pipe(out);
+  out.on("finish", () => console.log("Timelapse image saved:", outputPath));
+
+  // Reset canvas
+  await client.query("TRUNCATE TABLE pixels");
+  console.log("Canvas reset completed.");
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log("Server running on port", PORT));
