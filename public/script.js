@@ -1,7 +1,7 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-// Full window
+// Full screen
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
@@ -9,14 +9,12 @@ canvas.height = window.innerHeight;
 let currentColor = "#000000";
 let points = 10;
 let cooldown = 0;
+let gridEnabled = false;
 
 // WebSocket
 const ws = new WebSocket(`ws://${window.location.host}`);
 
-// Grid toggle
-let gridEnabled = false;
-
-// Draw grid if enabled
+// Draw grid
 function drawGrid() {
   if (!gridEnabled) return;
   ctx.strokeStyle = "#ddd";
@@ -34,7 +32,7 @@ function drawGrid() {
   }
 }
 
-// Redraw canvas with pixels
+// Redraw canvas
 function redraw(pixels) {
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -52,16 +50,12 @@ function updatePointsDisplay() {
 
   text.textContent = points;
 
-  // Contrast for points text
-  const color = currentColor.toLowerCase();
-  if (color === "#000000" || color === "#010100") {
-    text.style.color = "#fff";
-  } else {
-    text.style.color = "#000";
-  }
+  // Contrast
+  if (currentColor.toLowerCase() === "#000000") text.style.color = "#fff";
+  else text.style.color = "#000";
 }
 
-// Handle messages from server
+// Handle server messages
 ws.onmessage = e => {
   const data = JSON.parse(e.data);
   if (data.type === "init") redraw(data.pixels);
@@ -78,14 +72,12 @@ ws.onmessage = e => {
   }
 };
 
-// Draw pixel on click
+// Click to draw single pixel
 canvas.addEventListener("click", e => {
   if (points <= 0 || cooldown > 0) return;
-
   const rect = canvas.getBoundingClientRect();
   const x = Math.floor((e.clientX - rect.left) / 10) * 10;
   const y = Math.floor((e.clientY - rect.top) / 10) * 10;
-
   ws.send(JSON.stringify({ type: "draw", x, y, color: currentColor }));
 });
 
@@ -115,7 +107,7 @@ document.getElementById("more-colors").onclick = () => {
   popup.classList.toggle("hidden");
 };
 
-// Bottom actions
+// Grid toggle
 document.getElementById("toggle-grid").onclick = () => {
   gridEnabled = !gridEnabled;
   redraw([]);

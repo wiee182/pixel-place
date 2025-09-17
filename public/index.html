@@ -1,28 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pixel Canvas</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel Canvas</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<canvas id="canvas"></canvas>
+  <canvas id="canvas"></canvas>
 
-<div id="bottom-bar">
-  <div id="color-container">
-    <div id="color-square">
-      <div id="cooldown-overlay"></div>
-      <span id="points">10</span>
+  <!-- Bottom Bar -->
+  <div id="bottom-bar">
+    <div id="color-container">
+      <div id="color-square">
+        <div id="cooldown-overlay"></div>
+        <span id="points">10</span>
+      </div>
+      <button id="more-colors">+</button>
     </div>
-    <button id="more-colors">+</button>
+    <div id="bottom-actions">
+      <button id="toggle-grid">☑</button>
+    </div>
   </div>
-  <div id="bottom-actions">
-    <button id="toggle-grid">☑</button>
-  </div>
-</div>
 
-<div id="color-popup" class="hidden"></div>
-<script src="script.js"></script>
+  <!-- Color Popup -->
+  <div id="color-popup" class="hidden"></div>
+
+  <script src="script.js"></script>
 </body>
 </html>

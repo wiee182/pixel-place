@@ -6,13 +6,13 @@ body {
 }
 
 canvas {
-  background: #fff;
   display: block;
   margin: auto;
   cursor: crosshair;
+  background: #fff;
 }
 
-/* bottom bar */
+/* Bottom Bar */
 #bottom-bar {
   position: fixed;
   bottom: 10px;
@@ -81,7 +81,7 @@ canvas {
   cursor: pointer;
 }
 
-/* color popup */
+/* Color Popup */
 #color-popup {
   position: fixed;
   bottom: 70px;

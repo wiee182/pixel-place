@@ -1,12 +1,11 @@
-// server.js
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
 const { Client } = require("pg");
 const fs = require("fs");
 const path = require("path");
-const { exec } = require("child_process");
 const cron = require("node-cron");
+const { createCanvas } = require("canvas");
 
 const app = express();
 const server = http.createServer(app);
@@ -17,14 +16,12 @@ app.use(express.static("public"));
 // PostgreSQL connection
 const client = new Client({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false } // Railway requires this
+  ssl: { rejectUnauthorized: false }
 });
 
-client.connect()
-  .then(() => console.log("Connected to PostgreSQL"))
-  .catch(err => console.error("PostgreSQL connection error:", err));
+client.connect().then(() => console.log("Connected to PostgreSQL"));
 
-// Create tables if they don't exist
+// Create tables
 client.query(`
 CREATE TABLE IF NOT EXISTS pixels (
   x INT NOT NULL,
@@ -39,16 +36,15 @@ CREATE TABLE IF NOT EXISTS pixel_history (
   color TEXT NOT NULL,
   timestamp TIMESTAMPTZ DEFAULT NOW()
 );
-`).then(() => console.log("Tables ready"))
-  .catch(err => console.error("Error creating tables:", err));
+`);
 
-// Load current canvas
+// Load canvas
 async function getCanvas() {
   const res = await client.query("SELECT x, y, color FROM pixels");
   return res.rows;
 }
 
-// Save pixel to both current canvas and history
+// Save pixel
 async function setPixel(x, y, color) {
   await client.query(
     `INSERT INTO pixels(x,y,color) VALUES($1,$2,$3)
@@ -72,7 +68,6 @@ wss.on("connection", async ws => {
     let data;
     try { data = JSON.parse(msg); } catch { return; }
 
-    // Drawing pixels
     if (data.type === "draw") {
       const clientData = clients.get(ws);
       if (!clientData) return;
@@ -82,7 +77,6 @@ wss.on("connection", async ws => {
         clientData.points--;
         clientData.cooldown = 20;
 
-        // Broadcast pixel
         wss.clients.forEach(c => {
           if (c.readyState === WebSocket.OPEN)
             c.send(JSON.stringify({ type: "pixel", x: data.x, y: data.y, color: data.color }));
@@ -91,49 +85,35 @@ wss.on("connection", async ws => {
         ws.send(JSON.stringify({ type: "updatePoints", points: clientData.points, cooldown: clientData.cooldown }));
       }
     }
-
-    // Chat messages
-    if (data.type === "chat") {
-      const message = { type: "chat", user: data.user, text: data.text };
-      wss.clients.forEach(c => {
-        if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify(message));
-      });
-    }
   });
 
   ws.on("close", () => clients.delete(ws));
 });
 
-// Cooldown timer
+// Cooldown interval
 setInterval(() => {
-  clients.forEach((clientData, ws) => {
-    if (clientData.cooldown > 0) {
-      clientData.cooldown--;
-      if (clientData.cooldown === 0 && clientData.points < 10) clientData.points++;
+  clients.forEach((c, ws) => {
+    if (c.cooldown > 0) {
+      c.cooldown--;
+      if (c.cooldown === 0 && c.points < 10) c.points++;
       if (ws.readyState === WebSocket.OPEN)
-        ws.send(JSON.stringify({ type: "updatePoints", points: clientData.points, cooldown: clientData.cooldown }));
+        ws.send(JSON.stringify({ type: "updatePoints", points: c.points, cooldown: c.cooldown }));
     }
   });
 }, 1000);
 
-// --- Monthly timelapse + canvas reset ---
+// --- Monthly timelapse ---
+const TIMELAPSE_DIR = "/data/timelapse"; // Railway volume mount
+if (!fs.existsSync(TIMELAPSE_DIR)) fs.mkdirSync(TIMELAPSE_DIR, { recursive: true });
+
 // Runs at 1 AM UTC on the first day of every month
 cron.schedule("0 1 1 * *", async () => {
-  console.log("Starting monthly timelapse generation...");
+  console.log("Generating monthly timelapse...");
 
-  // Create folder for frames
-  const framesDir = path.join(__dirname, "frames");
-  if (!fs.existsSync(framesDir)) fs.mkdirSync(framesDir, { recursive: true });
+  const pixelsRes = await client.query("SELECT * FROM pixel_history ORDER BY timestamp ASC");
+  const pixels = pixelsRes.rows;
 
-  // Export pixel_history to CSV for FFmpeg
-  const res = await client.query("SELECT * FROM pixel_history ORDER BY timestamp ASC");
-  const pixels = res.rows;
-
-  // Save each frame as PNG
-  // For simplicity, here we just save one PNG snapshot of full canvas
-  // For real timelapse, you can expand this to multiple frames
-  const { createCanvas } = require("canvas");
-  const canvas = createCanvas(1000, 1000); // adjust size
+  const canvas = createCanvas(1000, 1000);
   const ctx = canvas.getContext("2d");
 
   ctx.fillStyle = "#fff";
@@ -144,11 +124,11 @@ cron.schedule("0 1 1 * *", async () => {
     ctx.fillRect(p.x, p.y, 10, 10);
   });
 
-  const outputPath = path.join(__dirname, `timelapse-${Date.now()}.png`);
-  const out = fs.createWriteStream(outputPath);
+  const outputFile = path.join(TIMELAPSE_DIR, `timelapse-${Date.now()}.png`);
+  const outStream = fs.createWriteStream(outputFile);
   const stream = canvas.createPNGStream();
-  stream.pipe(out);
-  out.on("finish", () => console.log("Timelapse image saved:", outputPath));
+  stream.pipe(outStream);
+  outStream.on("finish", () => console.log("Timelapse saved to Railway volume:", outputFile));
 
   // Reset canvas
   await client.query("TRUNCATE TABLE pixels");
