@@ -7,7 +7,6 @@ body {
 
 canvas {
   display: block;
-  margin: auto;
   cursor: crosshair;
   background: #fff;
 }
@@ -60,28 +59,15 @@ canvas {
   pointer-events: none;
 }
 
-#more-colors {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 6px;
-  background: #444;
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-}
-
-#bottom-actions button {
+#more-colors, #bottom-actions button {
   background: #444;
   border: none;
   border-radius: 6px;
   color: white;
   font-size: 18px;
-  padding: 6px;
   cursor: pointer;
 }
 
-/* Color Popup */
 #color-popup {
   position: fixed;
   bottom: 70px;
@@ -94,8 +80,8 @@ canvas {
   grid-template-columns: repeat(6, 28px);
   gap: 6px;
 }
-#color-popup.hidden { display: none; }
 
+#color-popup.hidden { display: none; }
 #color-popup .color-choice {
   width: 28px;
   height: 28px;

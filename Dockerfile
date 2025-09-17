@@ -1,14 +1,20 @@
-FROM node:20-bullseye
+# Base Node.js image
+FROM node:22
 
-WORKDIR /app
+# Create app directory
+WORKDIR /usr/src/app
 
-# Install build tools for canvas and sqlite (if needed)
-RUN apt-get update && apt-get install -y python3 g++ make
-
+# Copy package.json and package-lock.json
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
+# Copy the rest of the project
 COPY . .
 
+# Expose port
 EXPOSE 3000
+
+# Start server
 CMD ["node", "server.js"]
