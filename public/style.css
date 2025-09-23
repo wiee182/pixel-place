@@ -54,9 +54,8 @@ canvas {
   position: absolute;
   inset: 0;
   background: rgba(255,255,255,0.6);
-  transform-origin: bottom;   /* instead of top */
+  transform-origin: bottom; /* refill upward */
   transform: scaleY(0);
-  transition: transform 1s linear;
   pointer-events: none;
 }
 

@@ -1,35 +1,39 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-// Full screen
+// Full screen canvas
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 // State
 let currentColor = "#000000";
+let points = 10;
+let cooldownUntil = null;
 let gridEnabled = false;
 
-// Zoom & Pan
-let scale = 1;
-let offsetX = 0;
-let offsetY = 0;
-let isDragging = false;
-let dragStart = { x: 0, y: 0 };
+// ---- User ID (localStorage) ----
+let userId = localStorage.getItem("pixelUserId");
+if (!userId) {
+  userId = crypto.randomUUID();
+  localStorage.setItem("pixelUserId", userId);
+}
 
-// Socket.io (not raw WebSocket anymore!)
-const socket = io();
+// ---- Socket.io ----
+const socket = io({
+  auth: { userId }
+});
 
-// Draw grid lines
+// ---- Grid Drawing ----
 function drawGridLines() {
   if (!gridEnabled) return;
   ctx.strokeStyle = "#ddd";
-  for (let x = -offsetX % (10 * scale); x < canvas.width; x += 10 * scale) {
+  for (let x = 0; x < canvas.width; x += 10) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, canvas.height);
     ctx.stroke();
   }
-  for (let y = -offsetY % (10 * scale); y < canvas.height; y += 10 * scale) {
+  for (let y = 0; y < canvas.height; y += 10) {
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(canvas.width, y);
@@ -37,108 +41,103 @@ function drawGridLines() {
   }
 }
 
-// Redraw canvas
+function toggleGridLines() {
+  if (gridEnabled) {
+    drawGridLines();
+  } else {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    redraw([]); // reapply pixels
+  }
+}
+
 function redraw(pixels) {
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   pixels.forEach(p => {
     ctx.fillStyle = p.color;
-    ctx.fillRect(
-      (p.x * scale) + offsetX,
-      (p.y * scale) + offsetY,
-      10 * scale,
-      10 * scale
-    );
+    ctx.fillRect(p.x, p.y, 10, 10);
   });
   if (gridEnabled) drawGridLines();
 }
 
-// Handle server messages
-let pixels = [];
+// ---- UI Updates ----
+function updatePointsDisplay() {
+  const text = document.getElementById("points");
+  const square = document.getElementById("color-square");
+  const overlay = document.getElementById("cooldown-overlay");
 
-socket.on("init", data => {
-  pixels = data.pixels;
-  redraw(pixels);
-});
+  text.textContent = points;
 
-socket.on("pixel", data => {
-  pixels.push(data);
-  redraw(pixels);
-});
+  // contrast
+  text.style.color = (currentColor.toLowerCase() === "#000000") ? "#fff" : "#000";
 
-// Points system
-const pointsDisplay = document.getElementById("points");
-const cooldownOverlay = document.getElementById("cooldown-overlay");
+  // cooldown bar
+  if (cooldownUntil) {
+    const now = Date.now();
+    const total = 20000; // 20s
+    const remaining = Math.max(0, cooldownUntil - now);
+    const percent = 1 - remaining / total;
+    overlay.style.transform = `scaleY(${percent})`;
 
-socket.on("updatePoints", ({ points, cooldown }) => {
-  pointsDisplay.textContent = points;
-  if (!cooldown) {
-    cooldownOverlay.style.transform = "scaleY(0)";
-    cooldownOverlay.style.transition = "none";
+    if (remaining > 0) {
+      requestAnimationFrame(updatePointsDisplay);
+    } else {
+      // cooldown finished
+      cooldownUntil = null;
+      points = 10;
+      overlay.style.transform = "scaleY(0)";
+      text.textContent = points;
+    }
+  } else {
+    overlay.style.transform = "scaleY(0)";
   }
+}
+
+// ---- Socket Handlers ----
+socket.on("init", (data) => {
+  redraw(data.pixels);
 });
 
-socket.on("cooldownStart", ({ duration }) => {
-  cooldownOverlay.style.transition = `transform ${duration}ms linear`;
-  cooldownOverlay.style.transform = "scaleY(1)";
+socket.on("init-points", (data) => {
+  points = data.points;
+  cooldownUntil = data.cooldown_until ? new Date(data.cooldown_until).getTime() : null;
+  updatePointsDisplay();
 });
 
-// Click to draw
+socket.on("update-points", ({ points: newPoints }) => {
+  points = newPoints;
+  updatePointsDisplay();
+});
+
+socket.on("cooldown", ({ until }) => {
+  cooldownUntil = new Date(until).getTime();
+  updatePointsDisplay();
+});
+
+socket.on("pixel", (data) => {
+  ctx.fillStyle = data.color;
+  ctx.fillRect(data.x, data.y, 10, 10);
+});
+
+// ---- Drawing ----
 canvas.addEventListener("click", e => {
+  if (points <= 0 || (cooldownUntil && cooldownUntil > Date.now())) return;
+
   const rect = canvas.getBoundingClientRect();
-  const x = Math.floor((e.clientX - rect.left - offsetX) / (10 * scale));
-  const y = Math.floor((e.clientY - rect.top - offsetY) / (10 * scale));
+  const x = Math.floor((e.clientX - rect.left) / 10) * 10;
+  const y = Math.floor((e.clientY - rect.top) / 10) * 10;
+
   socket.emit("draw", { x, y, color: currentColor });
 });
 
-// Drag
-canvas.addEventListener("mousedown", e => {
-  isDragging = true;
-  dragStart.x = e.clientX - offsetX;
-  dragStart.y = e.clientY - offsetY;
-});
-canvas.addEventListener("mousemove", e => {
-  if (isDragging) {
-    offsetX = e.clientX - dragStart.x;
-    offsetY = e.clientY - dragStart.y;
-    redraw(pixels);
-  }
-});
-canvas.addEventListener("mouseup", () => (isDragging = false));
-
-// Zoom
-canvas.addEventListener("wheel", e => {
-  e.preventDefault();
-  const zoomFactor = 1.1;
-  const mouseX = e.clientX;
-  const mouseY = e.clientY;
-
-  const beforeZoomX = (mouseX - offsetX) / scale;
-  const beforeZoomY = (mouseY - offsetY) / scale;
-
-  if (e.deltaY < 0) {
-    scale *= zoomFactor;
-  } else {
-    scale /= zoomFactor;
-  }
-
-  const afterZoomX = (mouseX - offsetX) / scale;
-  const afterZoomY = (mouseY - offsetY) / scale;
-
-  offsetX += (afterZoomX - beforeZoomX) * scale;
-  offsetY += (afterZoomY - beforeZoomY) * scale;
-
-  redraw(pixels);
-});
-
-// Resize
+// ---- Window Resize ----
 window.addEventListener("resize", () => {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  redraw(pixels);
+  redraw([]);
 });
 
-// Color picker
+// ---- Color Picker ----
 const colors = [
   "#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100","#382314","#7c3f20",
   "#c16f36","#feac6d","#ffd3b0","#fea5d0","#f04eb4","#e872ff","#a631d3","#531c8d",
@@ -155,6 +154,7 @@ colors.forEach(c => {
     currentColor = c;
     document.getElementById("color-square").style.background = c;
     popup.classList.add("hidden");
+    updatePointsDisplay();
   };
   popup.appendChild(div);
 });
@@ -163,8 +163,7 @@ document.getElementById("more-colors").onclick = () => {
   popup.classList.toggle("hidden");
 };
 
-// Grid toggle
 document.getElementById("toggle-grid").onclick = () => {
   gridEnabled = !gridEnabled;
-  redraw(pixels);
+  toggleGridLines();
 };
