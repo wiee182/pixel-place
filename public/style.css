@@ -54,11 +54,12 @@ canvas {
   position: absolute;
   inset: 0;
   background: rgba(255,255,255,0.6);
-  transform-origin: top;
+  transform-origin: bottom;   /* instead of top */
   transform: scaleY(0);
   transition: transform 1s linear;
   pointer-events: none;
 }
+
 
 #more-colors {
   width: 32px;
