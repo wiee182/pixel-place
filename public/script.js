@@ -1,7 +1,7 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-// Fullscreen
+// Full screen
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
@@ -11,15 +11,11 @@ let points = 10;
 let cooldown = 0;
 let gridEnabled = false;
 
-// Sounds
-const drawSound = document.getElementById("draw-sound");
-const pointSound = document.getElementById("point-sound");
+// WebSocket
+const ws = new WebSocket(`ws://${window.location.host}`);
 
-// Socket.io
-const socket = io();
-
-// Draw grid
-function drawGrid() {
+// Draw grid lines
+function drawGridLines() {
   if (!gridEnabled) return;
   ctx.strokeStyle = "#ddd";
   for (let x = 0; x < canvas.width; x += 10) {
@@ -36,6 +32,16 @@ function drawGrid() {
   }
 }
 
+// Toggle grid lines without full redraw
+function toggleGridLines() {
+  if (gridEnabled) {
+    drawGridLines();
+  } else {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear only grid
+    redraw([]); // Redraw pixels without grid
+  }
+}
+
 // Redraw canvas
 function redraw(pixels) {
   ctx.fillStyle = "#fff";
@@ -44,7 +50,7 @@ function redraw(pixels) {
     ctx.fillStyle = p.color;
     ctx.fillRect(p.x, p.y, 10, 10);
   });
-  drawGrid();
+  if (gridEnabled) drawGridLines();
 }
 
 // Update points display
@@ -53,38 +59,43 @@ function updatePointsDisplay() {
   const text = document.getElementById("points");
 
   text.textContent = points;
-  text.style.color = currentColor.toLowerCase() === "#000000" ? "#fff" : "#000";
 
-  const overlay = document.getElementById("cooldown-overlay");
-  overlay.style.transform = cooldown > 0 ? `scaleY(${cooldown/20})` : "scaleY(0)";
+  // Contrast
+  if (currentColor.toLowerCase() === "#000000") text.style.color = "#fff";
+  else text.style.color = "#000";
 }
 
-// Handle socket messages
-socket.on("init", data => redraw(data.pixels));
-socket.on("pixel", data => {
-  ctx.fillStyle = data.color;
-  ctx.fillRect(data.x, data.y, 10, 10);
-  drawSound.play();
-});
+// Handle server messages
+ws.onmessage = e => {
+  const data = JSON.parse(e.data);
+  if (data.type === "init") redraw(data.pixels);
+  if (data.type === "pixel") {
+    ctx.fillStyle = data.color;
+    ctx.fillRect(data.x, data.y, 10, 10);
+  }
+  if (data.type === "updatePoints") {
+    points = data.points;
+    cooldown = data.cooldown;
+    updatePointsDisplay();
+    const overlay = document.getElementById("cooldown-overlay");
+    overlay.style.transform = cooldown > 0 ? `scaleY(${cooldown/20})` : "scaleY(0)";
+  }
+};
 
-// Click to draw
+// Click to draw single pixel
 canvas.addEventListener("click", e => {
   if (points <= 0 || cooldown > 0) return;
-
   const rect = canvas.getBoundingClientRect();
   const x = Math.floor((e.clientX - rect.left) / 10) * 10;
   const y = Math.floor((e.clientY - rect.top) / 10) * 10;
+  ws.send(JSON.stringify({ type: "draw", x, y, color: currentColor }));
+});
 
-  socket.emit("draw", { x, y, color: currentColor });
-  points--;
-  cooldown = 20;
-  updatePointsDisplay();
-  drawSound.play();
-  const interval = setInterval(() => {
-    cooldown--;
-    updatePointsDisplay();
-    if (cooldown <= 0) clearInterval(interval);
-  }, 1000);
+// Handle window resize
+window.addEventListener("resize", () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  redraw([]); // Redraw existing pixels on new canvas size
 });
 
 // Color picker
@@ -109,10 +120,12 @@ colors.forEach(c => {
   popup.appendChild(div);
 });
 
-document.getElementById("more-colors").onclick = () => popup.classList.toggle("hidden");
+document.getElementById("more-colors").onclick = () => {
+  popup.classList.toggle("hidden");
+};
 
 // Grid toggle
 document.getElementById("toggle-grid").onclick = () => {
   gridEnabled = !gridEnabled;
-  redraw([]);
+  toggleGridLines();
 };

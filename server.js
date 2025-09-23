@@ -1,23 +1,19 @@
 const express = require("express");
 const http = require("http");
-const { Server } = require("socket.io");
+const WebSocket = require("ws");
 const { Pool } = require("pg");
 const path = require("path");
-const fs = require("fs");
 
-// Database
+// Database connection (Railway provides DATABASE_URL)
 const pool = new Pool({
-  user: "postgres",          // change if needed
-  host: "localhost",
-  database: "pixelcanvas",   // database name from db.sql
-  password: "password",      // change if needed
-  port: 5432,
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
 // Express setup
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const wss = new WebSocket.Server({ server });
 
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -35,14 +31,30 @@ async function savePixel(x, y, color) {
   );
 }
 
-// Socket.io
-io.on("connection", async (socket) => {
-  const pixels = await getPixels();
-  socket.emit("init", { pixels });
+// Broadcast to all clients
+function broadcast(data) {
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(data));
+    }
+  });
+}
 
-  socket.on("draw", async ({ x, y, color }) => {
-    await savePixel(x, y, color);
-    io.emit("pixel", { x, y, color });
+// WebSocket handling
+wss.on("connection", async (ws) => {
+  const pixels = await getPixels();
+  ws.send(JSON.stringify({ type: "init", pixels }));
+
+  ws.on("message", async (message) => {
+    try {
+      const data = JSON.parse(message);
+      if (data.type === "draw") {
+        await savePixel(data.x, data.y, data.color);
+        broadcast({ type: "pixel", x: data.x, y: data.y, color: data.color });
+      }
+    } catch (err) {
+      console.error("WebSocket error:", err);
+    }
   });
 });
 
