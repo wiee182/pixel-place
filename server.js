@@ -4,13 +4,10 @@ const { Server } = require("socket.io");
 const { Pool } = require("pg");
 const path = require("path");
 
-// Database
+// Postgres connection
 const pool = new Pool({
-  user: "postgres",          // change if needed
-  host: "localhost",
-  database: "pixelcanvas",   // change if needed
-  password: "password",      // change if needed
-  port: 5432,
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false } // Required for Railway Postgres
 });
 
 // Ensure tables exist
@@ -82,7 +79,6 @@ async function checkAndResetUser(userId) {
 io.on("connection", async (socket) => {
   const userId = socket.handshake.auth.userId;
   if (!userId) {
-    console.log("⚠️ No userId provided, disconnecting...");
     socket.disconnect();
     return;
   }
@@ -96,10 +92,10 @@ io.on("connection", async (socket) => {
     );
   }
 
-  // Sync cooldown/points
+  // Sync user state
   const userState = await checkAndResetUser(userId);
 
-  // Send canvas + user state
+  // Send canvas + user points
   const pixels = await getPixels();
   socket.emit("init", { pixels });
   socket.emit("init-points", userState);
@@ -107,17 +103,15 @@ io.on("connection", async (socket) => {
   // Handle draw
   socket.on("draw", async ({ x, y, color }) => {
     let state = await checkAndResetUser(userId);
-
     if (!state) return;
+
     let { points, cooldown_until } = state;
 
-    // Cooldown check
     if (cooldown_until && new Date(cooldown_until) > new Date()) {
       socket.emit("cooldown", { until: cooldown_until });
       return;
     }
 
-    // Deduct points
     if (points > 0) {
       await savePixel(x, y, color);
       points--;

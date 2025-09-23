@@ -1,21 +1,20 @@
-# Use official Node.js LTS image
+# Base Node.js image
 FROM node:22-slim
 
-# Set working directory
+# Create app directory
 WORKDIR /usr/src/app
 
-# Install only production dependencies first (for faster caching)
+# Copy package.json and package-lock.json
 COPY package*.json ./
-RUN npm ci --only=production
+
+# Install production dependencies only
+RUN npm install --omit=dev
 
 # Copy the rest of the project
 COPY . .
 
 # Expose port
 EXPOSE 3000
-
-# Use environment variable for Node environment
-ENV NODE_ENV=production
 
 # Start server
 CMD ["node", "server.js"]
