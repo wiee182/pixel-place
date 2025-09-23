@@ -11,8 +11,8 @@ let points = 10;
 let cooldown = 0;
 let gridEnabled = false;
 
-// WebSocket
-const ws = new WebSocket(`ws://${window.location.host}`);
+// WebSocket (use secure WS on Railway)
+const ws = new WebSocket(`wss://${window.location.host}`);
 
 // Draw grid lines
 function drawGridLines() {
