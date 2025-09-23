@@ -8,27 +8,27 @@ const path = require("path");
 const pool = new Pool({
   user: "postgres",          // change if needed
   host: "localhost",
-  database: "pixelcanvas",   // make sure this DB exists
+  database: "pixelcanvas",   // change if needed
   password: "password",      // change if needed
   port: 5432,
 });
 
-// Ensure users table exists
+// Ensure tables exist
 (async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS pixels (
+      x INT NOT NULL,
+      y INT NOT NULL,
+      color TEXT NOT NULL,
+      PRIMARY KEY (x, y)
+    );
+  `);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       points INT DEFAULT 10,
       cooldown_until TIMESTAMP NULL
-    );
-  `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS pixels (
-      x INT,
-      y INT,
-      color TEXT,
-      PRIMARY KEY (x, y)
     );
   `);
 })();
@@ -40,13 +40,12 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, "public")));
 
-// Load pixels
+// Helpers
 async function getPixels() {
   const res = await pool.query("SELECT x, y, color FROM pixels");
   return res.rows;
 }
 
-// Save pixel
 async function savePixel(x, y, color) {
   await pool.query(
     `INSERT INTO pixels (x, y, color)
@@ -56,7 +55,6 @@ async function savePixel(x, y, color) {
   );
 }
 
-// Reset points if cooldown expired
 async function checkAndResetUser(userId) {
   const res = await pool.query(
     "SELECT points, cooldown_until FROM users WHERE id = $1",
@@ -96,7 +94,6 @@ io.on("connection", async (socket) => {
       "INSERT INTO users (id, points, cooldown_until) VALUES ($1, $2, $3)",
       [userId, 10, null]
     );
-    res = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
   }
 
   // Sync cooldown/points
@@ -134,7 +131,7 @@ io.on("connection", async (socket) => {
         socket.emit("cooldown", { until: cooldown_until });
       } else {
         await pool.query(
-          "UPDATE users SET points = $1 WHERE id = $2",
+          "UPDATE users SET points = $1, cooldown_until = NULL WHERE id = $2",
           [points, userId]
         );
       }

@@ -1,7 +1,7 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-// Full screen canvas
+// Full screen
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
@@ -23,7 +23,7 @@ const socket = io({
   auth: { userId }
 });
 
-// ---- Grid Drawing ----
+// ---- Grid ----
 function drawGridLines() {
   if (!gridEnabled) return;
   ctx.strokeStyle = "#ddd";
@@ -60,18 +60,15 @@ function redraw(pixels) {
   if (gridEnabled) drawGridLines();
 }
 
-// ---- UI Updates ----
+// ---- UI ----
 function updatePointsDisplay() {
   const text = document.getElementById("points");
-  const square = document.getElementById("color-square");
   const overlay = document.getElementById("cooldown-overlay");
 
   text.textContent = points;
 
-  // contrast
   text.style.color = (currentColor.toLowerCase() === "#000000") ? "#fff" : "#000";
 
-  // cooldown bar
   if (cooldownUntil) {
     const now = Date.now();
     const total = 20000; // 20s
@@ -82,7 +79,6 @@ function updatePointsDisplay() {
     if (remaining > 0) {
       requestAnimationFrame(updatePointsDisplay);
     } else {
-      // cooldown finished
       cooldownUntil = null;
       points = 10;
       overlay.style.transform = "scaleY(0)";
