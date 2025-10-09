@@ -1,63 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Register — Pixel Place</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register - Pixel Place</title>
   <link rel="stylesheet" href="style.css" />
-  <style>
-    .auth-box {
-      position: fixed;
-      left:50%;
-      top:50%;
-      transform: translate(-50%,-50%);
-      background:#fff;
-      padding:20px;
-      border-radius:10px;
-      box-shadow:0 6px 24px rgba(0,0,0,0.4);
-      width:320px;
-    }
-    .auth-box h2 { margin:0 0 12px }
-    .auth-box input { width:100%; padding:8px; margin:8px 0; }
-    .auth-box button { padding:10px 12px; width:100%; }
-    .link { margin-top:8px; text-align:center; font-size:14px; }
-  </style>
 </head>
 <body>
-  <div class="auth-box">
-    <h2>Create account</h2>
-    <input id="username" placeholder="Choose a username" />
-    <button id="regBtn">Create account</button>
-    <div class="link">
-      <a href="login.html">Already have an account?</a> · <a href="/">Back to canvas</a>
-    </div>
-    <div id="regMsg" style="color:red;margin-top:8px"></div>
+  <div class="login-container">
+    <h2>Buat Akun</h2>
+    <p class="login-subtitle">Masukan username unik</p>
+
+    <input type="text" id="reg-username" placeholder="Username" />
+    <button id="register-submit">Register</button>
+    <p id="reg-msg"></p>
+
+    <p>Sudah punya akun? <a href="/login.html" style="color:#1e90ff;">Login</a></p>
   </div>
 
   <script>
-    async function postJSON(url, data){
-      const res = await fetch(url, {
+    const regBtn = document.getElementById("register-submit");
+    const usernameInput = document.getElementById("reg-username");
+    const regMsg = document.getElementById("reg-msg");
+
+    regBtn.addEventListener("click", async () => {
+      const username = usernameInput.value.trim();
+      if (!username) return;
+
+      const res = await fetch("/register", {
         method: "POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify(data)
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username })
       });
-      return res.json();
-    }
 
-    document.getElementById("regBtn").addEventListener("click", async () => {
-      const u = document.getElementById("username").value.trim();
-      if (!u) return document.getElementById("regMsg").textContent = "Enter username";
-      const res = await postJSON("/api/register", { username: u });
-      if (res.ok) {
-        localStorage.setItem("pp_username", res.username);
-        location.href = "/";
+      const data = await res.json();
+      if (data.success) {
+        regMsg.style.color = "green";
+        regMsg.textContent = data.message + ". You can now login!";
       } else {
-        document.getElementById("regMsg").textContent = res.error || "Register failed";
+        regMsg.style.color = "red";
+        regMsg.textContent = data.message;
       }
-    });
-
-    document.getElementById("username").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") document.getElementById("regBtn").click();
     });
   </script>
 </body>

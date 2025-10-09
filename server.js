@@ -2,23 +2,34 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const app = express();
-const server = require("http").createServer(app);
-const io = require("socket.io")(server);
-const PORT = process.env.PORT || 3000;
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
 
-// --- Middleware ---
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
 
-// --- Users storage ---
 const usersFile = path.join(__dirname, "users.json");
 let users = {};
 if (fs.existsSync(usersFile)) {
   users = JSON.parse(fs.readFileSync(usersFile));
 }
 
-// --- Canvas storage (shared pixels) ---
-let pixels = {}; // key: "x,y", value: color
+// --- Register route ---
+app.post("/register", (req, res) => {
+  const { username } = req.body;
+  if (!username || username.trim() === "") {
+    return res.json({ success: false, message: "Username cannot be empty" });
+  }
+  const cleanUsername = username.trim();
+
+  if (users[cleanUsername]) {
+    return res.json({ success: false, message: "Username already exists" });
+  }
+
+  users[cleanUsername] = { username: cleanUsername };
+  fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+  res.json({ success: true, message: "Registration successful" });
+});
 
 // --- Login route ---
 app.post("/login", (req, res) => {
@@ -27,40 +38,30 @@ app.post("/login", (req, res) => {
     return res.json({ success: false, message: "Username cannot be empty" });
   }
   const cleanUsername = username.trim();
+
   if (!users[cleanUsername]) {
-    users[cleanUsername] = { username: cleanUsername };
-    fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+    return res.json({ success: false, message: "Username not registered" });
   }
+
   res.json({ success: true, username: cleanUsername });
 });
 
-// --- Serve main page ---
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+// --- Multiplayer canvas ---
+const pixels = new Map();
 
-// --- Socket.IO connection ---
-io.on("connection", (socket) => {
+io.on("connection", socket => {
   console.log("User connected:", socket.id);
 
-  // Send current canvas pixels to the new client
-  socket.emit("initCanvas", pixels);
+  // Send existing pixels to new user
+  socket.emit("init", Array.from(pixels));
 
-  // Listen for new pixel drawing
-  socket.on("drawPixel", ({ x, y, color }) => {
-    const key = `${x},${y}`;
-    pixels[key] = color;
-
-    // Broadcast this pixel to all other clients
-    socket.broadcast.emit("updatePixel", { x, y, color });
+  socket.on("draw", ({ x, y, color }) => {
+    pixels.set(`${x},${y}`, color);
+    io.emit("draw", { x, y, color });
   });
 
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
+  socket.on("disconnect", () => console.log("User disconnected:", socket.id));
 });
 
-// --- Start server ---
-server.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+http.listen(PORT, () => console.log(`Server running on port ${PORT}`));
