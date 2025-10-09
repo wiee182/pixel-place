@@ -1,9 +1,3 @@
-// --- Login check ---
-let currentUser = localStorage.getItem("username");
-if (!currentUser) {
-  console.log("User not logged in: drawing disabled");
-}
-
 // --- Canvas & DOM setup ---
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -32,13 +26,9 @@ let isDrawing = false;
 let isDragging = false;
 let lastMouseX, lastMouseY;
 
-let userPoints = 10; // initial points
-let isOnCooldown = false;
+let currentUser = localStorage.getItem("pp_username");
 
-pointsDisplay.textContent = userPoints;
-cooldownOverlay.style.display = "none";
-
-// --- Setup canvas ---
+// --- Canvas setup ---
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 cameraX = (canvas.width - canvasSize * scale) / 2;
@@ -50,23 +40,58 @@ document.addEventListener("contextmenu", e => e.preventDefault());
 // --- Socket.IO setup ---
 const socket = io();
 
-// Receive initial canvas from server
+// --- Login auto-redirect ---
+if (!currentUser) {
+  console.log("Not logged in yet, drawing disabled.");
+}
+
+// --- Receive initial canvas ---
 socket.on("initCanvas", (serverPixels) => {
-  for (let key in serverPixels) {
-    pixels.set(key, serverPixels[key]);
-  }
+  pixels.clear();
+  Object.entries(serverPixels).forEach(([key, color]) => pixels.set(key, color));
   drawAll();
 });
 
-// Receive pixel updates from other users
+// --- Receive pixel updates ---
 socket.on("updatePixel", ({ x, y, color }) => {
   pixels.set(`${x},${y}`, color);
   drawAll();
 });
 
+// --- Login success (from socket login) ---
+socket.on("login_success", (payload) => {
+  currentUser = payload.username;
+  localStorage.setItem("pp_username", currentUser);
+  pointsDisplay.textContent = payload.points;
+  const loginBtn = document.getElementById("login-btn");
+  if (loginBtn) {
+    loginBtn.textContent = currentUser;
+    loginBtn.disabled = true;
+  }
+});
+
+// --- Points update ---
+socket.on("points_update", (data) => {
+  pointsDisplay.textContent = data.points ?? data;
+});
+
+// --- Cooldown handling ---
+socket.on("cooldown_started", ({ wait }) => {
+  cooldownOverlay.style.display = "flex";
+  cooldownOverlay.textContent = wait;
+  const interval = setInterval(() => {
+    wait--;
+    cooldownOverlay.textContent = wait;
+    if (wait <= 0) {
+      clearInterval(interval);
+      cooldownOverlay.style.display = "none";
+      pointsDisplay.textContent = 10; // reset points after cooldown
+    }
+  }, 1000);
+});
+
 // --- Draw everything ---
 function drawAll() {
-  // White background
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -77,13 +102,11 @@ function drawAll() {
     ctx.fillRect(x * scale + cameraX, y * scale + cameraY, scale, scale);
   }
 
-  // Draw grid
+  // Draw grid & minimap
   drawGrid();
-
-  // Draw minimap
   drawMiniMap();
 
-  // Draw logged-in username (or guest)
+  // Draw user
   ctx.fillStyle = "#000";
   ctx.font = "16px Arial";
   ctx.fillText(`User: ${currentUser || "Guest"}`, 10, canvas.height - 10);
@@ -109,16 +132,10 @@ function drawGrid() {
   }
 }
 
-// --- Draw pixel ---
+// --- Draw pixel (send to server) ---
 function drawPixel(e) {
   if (!currentUser) {
     alert("Please log in to draw!");
-    return;
-  }
-
-  if (isOnCooldown) return;
-  if (userPoints <= 0) {
-    startCooldown();
     return;
   }
 
@@ -131,35 +148,7 @@ function drawPixel(e) {
 
   if (x < 0 || y < 0 || x >= canvasSize || y >= canvasSize) return;
 
-  pixels.set(`${x},${y}`, currentColor);
   socket.emit("drawPixel", { x, y, color: currentColor });
-
-  userPoints--;
-  pointsDisplay.textContent = userPoints;
-
-  drawAll();
-}
-
-// --- Cooldown ---
-function startCooldown() {
-  if (isOnCooldown) return;
-  isOnCooldown = true;
-  cooldownOverlay.style.display = "flex";
-  let countdown = 20;
-  cooldownOverlay.textContent = countdown;
-
-  const interval = setInterval(() => {
-    countdown--;
-    cooldownOverlay.textContent = countdown;
-
-    if (countdown <= 0) {
-      clearInterval(interval);
-      isOnCooldown = false;
-      userPoints = 10;
-      pointsDisplay.textContent = userPoints;
-      cooldownOverlay.style.display = "none";
-    }
-  }, 1000);
 }
 
 // --- Mouse events ---

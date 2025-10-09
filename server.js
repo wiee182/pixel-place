@@ -1,3 +1,4 @@
+// server.js
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -48,19 +49,69 @@ app.post("/login", (req, res) => {
 
 // --- Multiplayer canvas ---
 const pixels = new Map();
+const MAX_POINTS = 10;
+const COOLDOWN_TIME = 20; // seconds
 
-io.on("connection", socket => {
+// Track user points and cooldown
+const userData = {}; // { socketId: { username, points, cooldownUntil } }
+
+io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  // Send existing pixels to new user
-  socket.emit("init", Array.from(pixels));
+  // Send full canvas
+  socket.emit("initCanvas", Object.fromEntries(pixels));
 
-  socket.on("draw", ({ x, y, color }) => {
-    pixels.set(`${x},${y}`, color);
-    io.emit("draw", { x, y, color });
+  // Handle login via socket
+  socket.on("login", (username) => {
+    if (users[username]) {
+      userData[socket.id] = {
+        username,
+        points: MAX_POINTS,
+        cooldownUntil: 0,
+      };
+      socket.emit("login_success", {
+        username,
+        points: MAX_POINTS,
+      });
+      console.log(`${username} logged in on socket ${socket.id}`);
+    } else {
+      socket.emit("login_failed", "Username not registered");
+    }
   });
 
-  socket.on("disconnect", () => console.log("User disconnected:", socket.id));
+  // Handle drawing
+  socket.on("drawPixel", ({ x, y, color }) => {
+    const user = userData[socket.id];
+    if (!user) {
+      return socket.emit("place_failed", { reason: "not_logged_in" });
+    }
+
+    const now = Date.now();
+    if (user.cooldownUntil > now) {
+      return socket.emit("place_failed", { reason: "cooldown", wait: Math.ceil((user.cooldownUntil - now)/1000) });
+    }
+
+    if (user.points <= 0) {
+      user.cooldownUntil = now + COOLDOWN_TIME * 1000;
+      socket.emit("place_failed", { reason: "cooldown", wait: COOLDOWN_TIME });
+      return;
+    }
+
+    // Store pixel
+    pixels.set(`${x},${y}`, color);
+
+    // Broadcast to everyone
+    io.emit("updatePixel", { x, y, color });
+
+    // Subtract points
+    user.points--;
+    socket.emit("points_update", { points: user.points });
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+    delete userData[socket.id];
+  });
 });
 
 const PORT = process.env.PORT || 3000;

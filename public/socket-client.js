@@ -1,25 +1,21 @@
-// public/socket-client.js
+// --- socket-client.js ---
 const socket = io();
 
-// NOTE: 'pixels' Map, drawAll(), drawPixel(), cameraX/scale etc.
-// are defined in your existing script.js. We expect script.js to exist and remain unchanged.
-// socket-client will integrate with that existing logic.
+let me = {
+  username: localStorage.getItem("pp_username") || null,
+  points: 10,
+};
 
-let me = { username: null, points: 10, cooldownUntil: 0 };
-let cooldownTimerId = null;
-
+// --- On connect ---
 socket.on("connect", () => {
-  // ask server for status if logged in locally
-  const localUser = localStorage.getItem("pp_username");
-  if (localUser) {
-    socket.emit("login", localUser);
+  if (me.username) {
+    socket.emit("login", me.username);
   }
   socket.emit("whoami");
 });
 
-// receive full canvas
+// --- Initialize canvas ---
 socket.on("init", (pixelsObj) => {
-  // replace client pixels Map
   if (typeof pixels !== "undefined" && pixels instanceof Map) {
     pixels.clear();
     Object.entries(pixelsObj).forEach(([k, color]) => pixels.set(k, color));
@@ -27,87 +23,88 @@ socket.on("init", (pixelsObj) => {
   }
 });
 
-// new pixel from anyone
-socket.on("pixel", ({ x, y, color }) => {
+// --- Receive pixel update ---
+socket.on("updatePixel", ({ x, y, color }) => {
   if (typeof pixels !== "undefined" && pixels instanceof Map) {
     pixels.set(`${x},${y}`, color);
-    if (typeof drawSingle === "function") {
-      // optional: if you implement drawSingle to draw one pixel
-      drawSingle(x, y, color);
-    } else if (typeof drawAll === "function") {
-      drawAll();
-    }
+    if (typeof drawAll === "function") drawAll();
   }
 });
 
-// login results
+// --- Login success ---
 socket.on("login_success", (payload) => {
-  me.username = payload.username || payload;
-  me.points = payload.points || me.points;
+  me.username = payload.username;
+  me.points = payload.points;
   localStorage.setItem("pp_username", me.username);
-  // update UI: points element
-  const ptsEl = document.getElementById("points");
-  if (ptsEl) ptsEl.textContent = me.points;
-  // change login button text if present
+
   const loginBtn = document.getElementById("login-btn");
+  const pointsEl = document.getElementById("points");
   if (loginBtn) {
     loginBtn.textContent = me.username;
     loginBtn.disabled = true;
   }
+  if (pointsEl) pointsEl.textContent = me.points;
   console.log("Logged in as", me.username);
 });
 
-socket.on("login_failed", (reason) => {
-  alert("Login failed: " + (reason || ""));
-});
-
-// points and cooldown messages
+// --- Points update ---
 socket.on("points_update", (data) => {
   me.points = data.points ?? data;
-  const ptsEl = document.getElementById("points");
-  if (ptsEl) ptsEl.textContent = me.points;
+  const pointsEl = document.getElementById("points");
+  if (pointsEl) pointsEl.textContent = me.points;
 });
 
+// --- Cooldown started ---
 socket.on("cooldown_started", ({ wait }) => {
-  startLocalCooldown(wait || 20);
-});
-
-socket.on("place_failed", (data) => {
-  if (data && data.reason === "not_logged_in") {
-    alert("Please log in first.");
-  } else if (data && data.reason === "cooldown") {
-    startLocalCooldown(data.wait || 20);
-  } else {
-    // console.log("place failed", data);
-  }
-});
-
-function startLocalCooldown(seconds) {
   const overlay = document.getElementById("cooldown-overlay");
-  const ptsEl = document.getElementById("points");
-  if (overlay) overlay.style.display = "flex";
-  let remaining = seconds;
-  if (ptsEl) ptsEl.textContent = remaining;
-  if (cooldownTimerId) clearInterval(cooldownTimerId);
-  cooldownTimerId = setInterval(() => {
+  if (!overlay) return;
+  overlay.style.display = "flex";
+  overlay.textContent = wait;
+
+  let remaining = wait;
+  const interval = setInterval(() => {
     remaining--;
-    if (ptsEl) ptsEl.textContent = remaining;
-    if (overlay) overlay.textContent = remaining;
+    overlay.textContent = remaining;
     if (remaining <= 0) {
-      clearInterval(cooldownTimerId);
-      cooldownTimerId = null;
-      if (overlay) {
-        overlay.style.display = "none";
-        overlay.textContent = "";
-      }
-      // ask server for refreshed points
+      clearInterval(interval);
+      overlay.style.display = "none";
+      overlay.textContent = "";
+      // Ask server for refreshed points
       socket.emit("whoami");
     }
   }, 1000);
+});
+
+// --- Place pixel ---
+function socketEmitPlace(x, y, color) {
+  if (!me.username) {
+    alert("Please log in first!");
+    return;
+  }
+  socket.emit("drawPixel", { x, y, color });
 }
 
-// Expose function the drawing code should use to place pixels:
-// Replace client-side direct placing with: socketEmitPlace(x,y,color)
-function socketEmitPlace(x, y, color) {
-  socket.emit("place_pixel", { x, y, color });
-}
+// Optional: handle place failures
+socket.on("place_failed", (data) => {
+  if (data.reason === "not_logged_in") {
+    alert("Please log in first!");
+  } else if (data.reason === "cooldown") {
+    const wait = data.wait || 20;
+    const overlay = document.getElementById("cooldown-overlay");
+    if (overlay) {
+      overlay.style.display = "flex";
+      overlay.textContent = wait;
+      let remaining = wait;
+      const interval = setInterval(() => {
+        remaining--;
+        overlay.textContent = remaining;
+        if (remaining <= 0) {
+          clearInterval(interval);
+          overlay.style.display = "none";
+          overlay.textContent = "";
+          socket.emit("whoami");
+        }
+      }, 1000);
+    }
+  }
+});
