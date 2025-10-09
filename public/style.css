@@ -198,3 +198,39 @@ button:hover {
   background: #f0f0f0;
   transform: scale(1.05);
 }
+
+.login-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  padding: 24px 32px;
+  border-radius: 12px;
+  box-shadow: 0 3px 15px rgba(0,0,0,0.3);
+  text-align: center;
+  z-index: 100;
+}
+
+.login-container input {
+  width: 200px;
+  padding: 8px;
+  margin: 8px 0;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.login-container button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  background: #1e90ff;
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.login-container button:hover {
+  background: #0c71d6;
+}
