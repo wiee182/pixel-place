@@ -276,3 +276,17 @@ window.addEventListener("resize", () => drawAll());
 
 // --- Initial draw ---
 drawAll();
+
+const loginPopup = document.getElementById("login-popup");
+
+// Show popup if user not logged in
+if (!currentUser) {
+  loginPopup.classList.remove("hidden");
+} else {
+  loginPopup.classList.add("hidden");
+}
+
+// Optional: click popup to go to login page
+loginPopup.addEventListener("click", () => {
+  window.location.href = "/login.html";
+});
