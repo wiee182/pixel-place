@@ -1,7 +1,7 @@
 // --- Login check ---
 let currentUser = localStorage.getItem("username");
 if (!currentUser) {
-  window.location.href = "/login.html";
+  console.log("User not logged in: drawing disabled");
 }
 
 // --- Canvas & DOM setup ---
@@ -83,10 +83,10 @@ function drawAll() {
   // Draw minimap
   drawMiniMap();
 
-  // Draw logged-in username
+  // Draw logged-in username (or guest)
   ctx.fillStyle = "#000";
   ctx.font = "16px Arial";
-  ctx.fillText(`User: ${currentUser}`, 10, canvas.height - 10);
+  ctx.fillText(`User: ${currentUser || "Guest"}`, 10, canvas.height - 10);
 }
 
 function drawGrid() {
@@ -111,6 +111,11 @@ function drawGrid() {
 
 // --- Draw pixel ---
 function drawPixel(e) {
+  if (!currentUser) {
+    alert("Please log in to draw!");
+    return;
+  }
+
   if (isOnCooldown) return;
   if (userPoints <= 0) {
     startCooldown();
