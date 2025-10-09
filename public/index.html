@@ -1,32 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pixel Canvas</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pixel Place</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <canvas id="canvas"></canvas>
 
   <!-- Bottom Bar -->
   <div id="bottom-bar">
-    <div id="color-container">
-      <div id="color-square">
-        <div id="cooldown-overlay"></div>
-        <span id="points">10</span>
-      </div>
-      <button id="more-colors">+</button>
+  <div id="color-container">
+    <div id="color-square">
+      <div id="cooldown-overlay"></div>
+      <span id="points">10</span>
     </div>
-    <div id="bottom-actions">
-      <button id="toggle-grid">☑</button>
-    </div>
+    <button id="more-colors">+</button>
+  </div>
+  <div id="bottom-actions">
+    <button id="toggle-grid">
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <rect class="grid-square" x="1" y="1" width="8" height="8"/>
+    <rect class="grid-square" x="11" y="1" width="8" height="8"/>
+    <rect class="grid-square" x="1" y="11" width="8" height="8"/>
+    <rect class="grid-square" x="11" y="11" width="8" height="8"/>
+  </svg>
+</button>
+  </div>
   </div>
 
   <!-- Color Popup -->
   <div id="color-popup" class="hidden"></div>
-  
-<script src="/socket.io/socket.io.js"></script>
-<script src="script.js"></script>
+
+  <!-- Login Button (separated, near bottom bar) -->
+  <button id="login-btn">Login</button>
+
+  <script src="script.js"></script>
 </body>
 </html>

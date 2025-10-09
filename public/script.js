@@ -1,139 +1,14 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const gridBtn = document.getElementById("toggle-grid");
+const colorSquare = document.getElementById("color-square");
+const colorPopup = document.getElementById("color-popup");
+const moreColorsBtn = document.getElementById("more-colors");
+const pointsDisplay = document.getElementById("points");
+const cooldownOverlay = document.getElementById("cooldown-overlay");
 
-// Full screen
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-// State
-let currentColor = "#000000";
-let points = 10;
-let cooldownUntil = null;
-let gridEnabled = false;
-
-// ---- User ID (localStorage) ----
-let userId = localStorage.getItem("pixelUserId");
-if (!userId) {
-  userId = crypto.randomUUID();
-  localStorage.setItem("pixelUserId", userId);
-}
-
-// ---- Socket.io ----
-const socket = io({
-  auth: { userId }
-});
-
-// ---- Grid ----
-function drawGridLines() {
-  if (!gridEnabled) return;
-  ctx.strokeStyle = "#ddd";
-  for (let x = 0; x < canvas.width; x += 10) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvas.height);
-    ctx.stroke();
-  }
-  for (let y = 0; y < canvas.height; y += 10) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(canvas.width, y);
-    ctx.stroke();
-  }
-}
-
-function toggleGridLines() {
-  if (gridEnabled) {
-    drawGridLines();
-  } else {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    redraw([]); // reapply pixels
-  }
-}
-
-function redraw(pixels) {
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  pixels.forEach(p => {
-    ctx.fillStyle = p.color;
-    ctx.fillRect(p.x, p.y, 10, 10);
-  });
-  if (gridEnabled) drawGridLines();
-}
-
-// ---- UI ----
-function updatePointsDisplay() {
-  const text = document.getElementById("points");
-  const overlay = document.getElementById("cooldown-overlay");
-
-  text.textContent = points;
-
-  text.style.color = (currentColor.toLowerCase() === "#000000") ? "#fff" : "#000";
-
-  if (cooldownUntil) {
-    const now = Date.now();
-    const total = 20000; // 20s
-    const remaining = Math.max(0, cooldownUntil - now);
-    const percent = 1 - remaining / total;
-    overlay.style.transform = `scaleY(${percent})`;
-
-    if (remaining > 0) {
-      requestAnimationFrame(updatePointsDisplay);
-    } else {
-      cooldownUntil = null;
-      points = 10;
-      overlay.style.transform = "scaleY(0)";
-      text.textContent = points;
-    }
-  } else {
-    overlay.style.transform = "scaleY(0)";
-  }
-}
-
-// ---- Socket Handlers ----
-socket.on("init", (data) => {
-  redraw(data.pixels);
-});
-
-socket.on("init-points", (data) => {
-  points = data.points;
-  cooldownUntil = data.cooldown_until ? new Date(data.cooldown_until).getTime() : null;
-  updatePointsDisplay();
-});
-
-socket.on("update-points", ({ points: newPoints }) => {
-  points = newPoints;
-  updatePointsDisplay();
-});
-
-socket.on("cooldown", ({ until }) => {
-  cooldownUntil = new Date(until).getTime();
-  updatePointsDisplay();
-});
-
-socket.on("pixel", (data) => {
-  ctx.fillStyle = data.color;
-  ctx.fillRect(data.x, data.y, 10, 10);
-});
-
-// ---- Drawing ----
-canvas.addEventListener("click", e => {
-  if (points <= 0 || (cooldownUntil && cooldownUntil > Date.now())) return;
-
-  const rect = canvas.getBoundingClientRect();
-  const x = Math.floor((e.clientX - rect.left) / 10) * 10;
-  const y = Math.floor((e.clientY - rect.top) / 10) * 10;
-
-  socket.emit("draw", { x, y, color: currentColor });
-});
-
-// ---- Window Resize ----
-window.addEventListener("resize", () => {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  redraw([]);
-});
-
-// ---- Color Picker ----
+const canvasSize = 1000;
+const pixels = new Map();
 const colors = [
   "#fffefe","#b9c2ce","#767e8c","#424651","#1e1f26","#010100","#382314","#7c3f20",
   "#c16f36","#feac6d","#ffd3b0","#fea5d0","#f04eb4","#e872ff","#a631d3","#531c8d",
@@ -141,25 +16,217 @@ const colors = [
   "#b1ff37","#fffea4","#fce011","#fe9e17","#f66e08","#550123","#99011a","#f20e0c","#ff7872"
 ];
 
-const popup = document.getElementById("color-popup");
-colors.forEach(c => {
-  const div = document.createElement("div");
-  div.className = "color-choice";
-  div.style.background = c;
-  div.onclick = () => {
-    currentColor = c;
-    document.getElementById("color-square").style.background = c;
-    popup.classList.add("hidden");
-    updatePointsDisplay();
-  };
-  popup.appendChild(div);
+let currentColor = "#000";
+let scale = 20;
+let showGrid = true;
+
+let cameraX = 0;
+let cameraY = 0;
+let isDrawing = false;
+let isDragging = false;
+let lastMouseX, lastMouseY;
+
+let userPoints = 10; // initial points
+let isOnCooldown = false;
+
+pointsDisplay.textContent = userPoints;
+cooldownOverlay.style.display = "none";
+
+// --- Setup canvas ---
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+cameraX = (canvas.width - canvasSize * scale) / 2;
+cameraY = (canvas.height - canvasSize * scale) / 2;
+
+// Disable right-click menu
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+// --- Draw everything ---
+function drawAll() {
+  // White background
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw pixels
+  for (let [key, color] of pixels) {
+    const [x, y] = key.split(",").map(Number);
+    ctx.fillStyle = color;
+    ctx.fillRect(x * scale + cameraX, y * scale + cameraY, scale, scale);
+  }
+
+  drawGrid();
+  drawMiniMap();
+}
+
+function drawGrid() {
+  if (!showGrid) return;
+  ctx.strokeStyle = "rgba(0,0,0,0.1)";
+  ctx.lineWidth = 0.5;
+
+  for (let x = 0; x <= canvasSize; x++) {
+    ctx.beginPath();
+    ctx.moveTo(x * scale + cameraX, cameraY);
+    ctx.lineTo(x * scale + cameraX, canvasSize * scale + cameraY);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y <= canvasSize; y++) {
+    ctx.beginPath();
+    ctx.moveTo(cameraX, y * scale + cameraY);
+    ctx.lineTo(canvasSize * scale + cameraX, y * scale + cameraY);
+    ctx.stroke();
+  }
+}
+
+// --- Drawing pixels ---
+function drawPixel(e) {
+  if (isOnCooldown) return; // cannot draw during cooldown
+  if (userPoints <= 0) return; // no points left, can't draw
+
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  const x = Math.floor((mouseX - cameraX) / scale);
+  const y = Math.floor((mouseY - cameraY) / scale);
+
+  if (x < 0 || y < 0 || x >= canvasSize || y >= canvasSize) return;
+
+  pixels.set(`${x},${y}`, currentColor);
+
+  // Subtract points
+  userPoints--;
+  pointsDisplay.textContent = userPoints;
+  drawAll();
+
+  // 🟢 Start cooldown automatically when points hit 0
+  if (userPoints === 0 && !isOnCooldown) {
+    startCooldown();
+  }
+}
+
+
+// --- Cooldown ---
+function startCooldown() {
+  if (isOnCooldown) return;
+  isOnCooldown = true;
+  cooldownOverlay.style.display = "flex";
+  let countdown = 20;
+  cooldownOverlay.textContent = countdown;
+
+  const interval = setInterval(() => {
+    countdown--;
+    cooldownOverlay.textContent = countdown;
+
+    if (countdown <= 0) {
+      clearInterval(interval);
+      isOnCooldown = false;
+      userPoints = 10; // reset points
+      pointsDisplay.textContent = userPoints;
+      cooldownOverlay.style.display = "none";
+    }
+  }, 1000);
+}
+
+// --- Mouse events ---
+canvas.addEventListener("mousedown", e => {
+  if (e.button === 0) {
+    isDrawing = true;
+    drawPixel(e);
+  } else {
+    isDragging = true;
+  }
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
 });
 
-document.getElementById("more-colors").onclick = () => {
-  popup.classList.toggle("hidden");
-};
+canvas.addEventListener("mouseup", () => {
+  isDrawing = false;
+  isDragging = false;
+});
 
-document.getElementById("toggle-grid").onclick = () => {
-  gridEnabled = !gridEnabled;
-  toggleGridLines();
-};
+canvas.addEventListener("mousemove", e => {
+  if (isDrawing) drawPixel(e);
+  if (isDragging) {
+    cameraX += e.clientX - lastMouseX;
+    cameraY += e.clientY - lastMouseY;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    drawAll();
+  }
+});
+
+// --- Zoom ---
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+  const newScale = Math.max(1, Math.min(scale * zoomFactor, 40));
+
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  cameraX -= (newScale - scale) * (mouseX - cameraX) / scale;
+  cameraY -= (newScale - scale) * (mouseY - cameraY) / scale;
+
+  scale = newScale;
+  drawAll();
+});
+
+// --- Minimap ---
+const miniMap = document.createElement("canvas");
+const miniCtx = miniMap.getContext("2d");
+miniMap.width = 200;
+miniMap.height = 200;
+miniMap.id = "minimap";
+document.body.appendChild(miniMap);
+
+function drawMiniMap() {
+  miniCtx.fillStyle = "#fff";
+  miniCtx.fillRect(0, 0, miniMap.width, miniMap.height);
+
+  const factor = miniMap.width / canvasSize;
+  for (let [key, color] of pixels) {
+    const [x, y] = key.split(",").map(Number);
+    miniCtx.fillStyle = color;
+    miniCtx.fillRect(x * factor, y * factor, factor, factor);
+  }
+
+  // Draw viewport rectangle
+  miniCtx.strokeStyle = "#000";
+  miniCtx.lineWidth = 1;
+  miniCtx.strokeRect(-cameraX / scale * factor, -cameraY / scale * factor,
+    canvas.width / scale * factor, canvas.height / scale * factor);
+}
+
+miniMap.addEventListener("click", e => {
+  const rect = miniMap.getBoundingClientRect();
+  const factor = miniMap.width / canvasSize;
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  cameraX = -x / factor * scale + canvas.width / 2;
+  cameraY = -y / factor * scale + canvas.height / 2;
+  drawAll();
+});
+
+// --- Color palette ---
+colors.forEach(c => {
+  const div = document.createElement("div");
+  div.className = "color-option";
+  div.style.background = c;
+  div.addEventListener("click", () => {
+    currentColor = c;
+    colorSquare.style.background = c;
+    colorPopup.classList.add("hidden");
+  });
+  colorPopup.appendChild(div);
+});
+
+moreColorsBtn.addEventListener("click", () => colorPopup.classList.toggle("hidden"));
+gridBtn.addEventListener("click", () => { showGrid = !showGrid; drawAll(); });
+
+window.addEventListener("resize", () => drawAll());
+
+// Initial draw
+drawAll();
