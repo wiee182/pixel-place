@@ -8,9 +8,12 @@
 </head>
 <body>
   <div class="login-container">
-    <h2>Login</h2>
-    <input type="text" id="username" placeholder="Enter your username" />
-    <button id="login-submit">Login</button>
+    <h2>Welcome to Pixel Place</h2>
+    <p class="login-subtitle">Enter your username to start drawing!</p>
+    
+    <input type="text" id="username" placeholder="Username" />
+    <button id="login-submit">Start</button>
+    
     <p id="login-msg"></p>
   </div>
 
@@ -35,6 +38,7 @@
         window.location.href = "/";
       } else {
         loginMsg.textContent = data.message;
+        loginMsg.style.color = "red";
       }
     });
   </script>
