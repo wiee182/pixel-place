@@ -1,4 +1,3 @@
-// server.js
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -9,112 +8,99 @@ const io = require("socket.io")(http);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-const USERS_FILE = path.join(__dirname, "users.json");
+const usersFile = path.join(__dirname, "users.json");
 let users = {};
-if (fs.existsSync(USERS_FILE)) {
-  users = JSON.parse(fs.readFileSync(USERS_FILE));
+if (fs.existsSync(usersFile)) {
+  users = JSON.parse(fs.readFileSync(usersFile));
 }
 
-// --- Registration ---
+// === Register route ===
 app.post("/register", (req, res) => {
   const { username } = req.body;
-  if (!username || username.trim() === "") {
+  if (!username || username.trim() === "")
     return res.json({ success: false, message: "Username cannot be empty" });
-  }
-  const cleanUsername = username.trim();
-  if (users[cleanUsername]) {
-    return res.json({ success: false, message: "Username already exists" });
-  }
 
-  users[cleanUsername] = { username: cleanUsername, points: 10, cooldownUntil: 0 };
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+  const clean = username.trim();
+  if (users[clean])
+    return res.json({ success: false, message: "Username already exists" });
+
+  users[clean] = { username: clean, points: 10 };
+  fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
   res.json({ success: true, message: "Registration successful" });
 });
 
-// --- Login ---
+// === Login route ===
 app.post("/login", (req, res) => {
   const { username } = req.body;
-  if (!username || username.trim() === "") {
+  if (!username || username.trim() === "")
     return res.json({ success: false, message: "Username cannot be empty" });
-  }
-  const cleanUsername = username.trim();
-  if (!users[cleanUsername]) {
+
+  const clean = username.trim();
+  if (!users[clean])
     return res.json({ success: false, message: "Username not registered" });
-  }
-  res.json({ success: true, username: cleanUsername });
+
+  res.json({ success: true, username: clean });
 });
 
-// --- Multiplayer canvas ---
-const pixels = new Map();
-const COOLDOWN = 20; // seconds
-const POINTS_PER_COOLDOWN = 10;
+// === Canvas Storage ===
+const pixels = {}; // store as { "x,y": color }
 
-io.on("connection", socket => {
-  console.log("User connected:", socket.id);
+// === Socket.io ===
+io.on("connection", (socket) => {
+  console.log("New user:", socket.id);
 
-  // Send full canvas to new client
-  socket.emit("init", Object.fromEntries(pixels));
+  socket.username = null;
+  socket.lastPlace = 0;
 
-  let currentUser = null;
-
-  // Login via socket
+  // Login check from socket-client.js
   socket.on("login", (username) => {
-    if (!username || !users[username]) {
+    if (users[username]) {
+      socket.username = username;
+      socket.emit("login_success", { username, points: users[username].points });
+    } else {
       socket.emit("login_failed", "User not registered");
-      return;
     }
-    currentUser = username;
-    const userData = users[username];
-    socket.emit("login_success", { username, points: userData.points });
   });
 
-  // Whoami for client refresh
+  // Send all pixels to client
+  socket.emit("init", pixels);
+
+  // Client requests their info
   socket.on("whoami", () => {
-    if (!currentUser) return;
-    const userData = users[currentUser];
-    socket.emit("points_update", { points: userData.points });
+    if (socket.username && users[socket.username]) {
+      socket.emit("login_success", {
+        username: socket.username,
+        points: users[socket.username].points,
+      });
+    }
   });
 
-  // Draw pixel
-  socket.on("drawPixel", ({ x, y, color }) => {
-    if (!currentUser) {
-      socket.emit("place_failed", { reason: "not_logged_in" });
-      return;
+  // Handle placing pixels
+  socket.on("place_pixel", ({ x, y, color }) => {
+    if (!socket.username) {
+      return socket.emit("place_failed", { reason: "not_logged_in" });
     }
 
-    const userData = users[currentUser];
     const now = Date.now();
+    const diff = now - socket.lastPlace;
+    const wait = 2000; // 2 seconds cooldown
 
-    // Check cooldown
-    if (userData.cooldownUntil && now < userData.cooldownUntil) {
-      const wait = Math.ceil((userData.cooldownUntil - now) / 1000);
-      socket.emit("place_failed", { reason: "cooldown", wait });
+    if (diff < wait) {
+      const remaining = Math.ceil((wait - diff) / 1000);
+      socket.emit("place_failed", { reason: "cooldown", wait: remaining });
       return;
     }
 
-    // Place pixel
-    pixels.set(`${x},${y}`, color);
-    io.emit("updatePixel", { x, y, color });
-
-    // Subtract points
-    userData.points--;
-    if (userData.points <= 0) {
-      userData.points = 0;
-      userData.cooldownUntil = now + COOLDOWN * 1000;
-      socket.emit("cooldown_started", { wait: COOLDOWN });
-    }
-
-    // Save users to file
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-
-    // Update client points
-    socket.emit("points_update", { points: userData.points });
+    pixels[`${x},${y}`] = color;
+    socket.lastPlace = now;
+    io.emit("pixel", { x, y, color });
+    socket.emit("points_update", users[socket.username].points);
   });
 
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+    console.log("Disconnected:", socket.id);
   });
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+http.listen(PORT, () => console.log(`✅ Server running at http://localhost:${PORT}`));

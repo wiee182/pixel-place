@@ -30,7 +30,7 @@ let isDrawing = false;
 let isDragging = false;
 let lastMouseX, lastMouseY;
 
-let userPoints = 10; // initial points
+let userPoints = 10;
 let isOnCooldown = false;
 
 pointsDisplay.textContent = userPoints;
@@ -42,7 +42,6 @@ canvas.height = window.innerHeight;
 cameraX = (canvas.width - canvasSize * scale) / 2;
 cameraY = (canvas.height - canvasSize * scale) / 2;
 
-// Disable right-click menu
 document.addEventListener("contextmenu", e => e.preventDefault());
 
 // --- Login button behavior ---
@@ -60,16 +59,22 @@ if (currentUser) {
 // --- Socket.IO setup ---
 const socket = io();
 
-// Receive initial canvas from server
-socket.on("initCanvas", (serverPixels) => {
-  for (let key in serverPixels) {
-    pixels.set(key, serverPixels[key]);
+// When connected, login automatically if saved user exists
+socket.on("connect", () => {
+  if (currentUser) {
+    socket.emit("login", currentUser);
   }
+});
+
+// Receive full canvas
+socket.on("init", (serverPixels) => {
+  pixels.clear();
+  Object.entries(serverPixels).forEach(([k, v]) => pixels.set(k, v));
   drawAll();
 });
 
-// Receive pixel updates from other users
-socket.on("updatePixel", ({ x, y, color }) => {
+// Receive new pixel updates
+socket.on("pixel", ({ x, y, color }) => {
   pixels.set(`${x},${y}`, color);
   drawAll();
 });
@@ -85,26 +90,19 @@ function drawAll() {
     ctx.fillRect(x * scale + cameraX, y * scale + cameraY, scale, scale);
   }
 
-  drawGrid();
+  if (showGrid) drawGrid();
   drawMiniMap();
-
-  ctx.fillStyle = "#000";
-  ctx.font = "16px Arial";
-  ctx.fillText(`User: ${currentUser || "Guest"}`, 10, canvas.height - 10);
 }
 
 function drawGrid() {
-  if (!showGrid) return;
   ctx.strokeStyle = "rgba(0,0,0,0.1)";
   ctx.lineWidth = 0.5;
-
   for (let x = 0; x <= canvasSize; x++) {
     ctx.beginPath();
     ctx.moveTo(x * scale + cameraX, cameraY);
     ctx.lineTo(x * scale + cameraX, canvasSize * scale + cameraY);
     ctx.stroke();
   }
-
   for (let y = 0; y <= canvasSize; y++) {
     ctx.beginPath();
     ctx.moveTo(cameraX, y * scale + cameraY);
@@ -116,10 +114,9 @@ function drawGrid() {
 // --- Draw pixel ---
 function drawPixel(e) {
   if (!currentUser) {
-    alert("Please log in to draw!");
+    showLoginPopup();
     return;
   }
-
   if (isOnCooldown) return;
   if (userPoints <= 0) {
     startCooldown();
@@ -132,16 +129,11 @@ function drawPixel(e) {
 
   const x = Math.floor((mouseX - cameraX) / scale);
   const y = Math.floor((mouseY - cameraY) / scale);
-
   if (x < 0 || y < 0 || x >= canvasSize || y >= canvasSize) return;
 
-  pixels.set(`${x},${y}`, currentColor);
-  socket.emit("drawPixel", { x, y, color: currentColor });
-
+  socket.emit("place_pixel", { x, y, color: currentColor });
   userPoints--;
   pointsDisplay.textContent = userPoints;
-
-  drawAll();
 }
 
 // --- Cooldown ---
@@ -151,11 +143,9 @@ function startCooldown() {
   cooldownOverlay.style.display = "flex";
   let countdown = 20;
   cooldownOverlay.textContent = countdown;
-
   const interval = setInterval(() => {
     countdown--;
     cooldownOverlay.textContent = countdown;
-
     if (countdown <= 0) {
       clearInterval(interval);
       isOnCooldown = false;
@@ -168,8 +158,6 @@ function startCooldown() {
 
 // --- Mouse events ---
 canvas.addEventListener("mousedown", e => {
-  if (!currentUser) return; // prevent drawing if not logged in
-
   if (e.button === 0) {
     isDrawing = true;
     drawPixel(e);
@@ -186,8 +174,6 @@ canvas.addEventListener("mouseup", () => {
 });
 
 canvas.addEventListener("mousemove", e => {
-  if (!currentUser) return; // prevent drawing if not logged in
-
   if (isDrawing) drawPixel(e);
   if (isDragging) {
     cameraX += e.clientX - lastMouseX;
@@ -198,58 +184,37 @@ canvas.addEventListener("mousemove", e => {
   }
 });
 
-// --- Zoom ---
 canvas.addEventListener("wheel", e => {
   e.preventDefault();
-  const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-  const newScale = Math.max(1, Math.min(scale * zoomFactor, 40));
-
+  const zoom = e.deltaY < 0 ? 1.1 : 0.9;
+  const newScale = Math.max(1, Math.min(scale * zoom, 40));
   const rect = canvas.getBoundingClientRect();
   const mouseX = e.clientX - rect.left;
   const mouseY = e.clientY - rect.top;
-
   cameraX -= (newScale - scale) * (mouseX - cameraX) / scale;
   cameraY -= (newScale - scale) * (mouseY - cameraY) / scale;
-
   scale = newScale;
   drawAll();
 });
 
 // --- Mini Map ---
 const miniMap = document.createElement("canvas");
-const miniCtx = miniMap.getContext("2d");
+miniMap.id = "minimap";
 miniMap.width = 200;
 miniMap.height = 200;
-miniMap.id = "minimap";
 document.body.appendChild(miniMap);
+const miniCtx = miniMap.getContext("2d");
 
 function drawMiniMap() {
   miniCtx.fillStyle = "#fff";
   miniCtx.fillRect(0, 0, miniMap.width, miniMap.height);
-
   const factor = miniMap.width / canvasSize;
   for (let [key, color] of pixels) {
     const [x, y] = key.split(",").map(Number);
     miniCtx.fillStyle = color;
     miniCtx.fillRect(x * factor, y * factor, factor, factor);
   }
-
-  miniCtx.strokeStyle = "#000";
-  miniCtx.lineWidth = 1;
-  miniCtx.strokeRect(-cameraX / scale * factor, -cameraY / scale * factor,
-    canvas.width / scale * factor, canvas.height / scale * factor);
 }
-
-miniMap.addEventListener("click", e => {
-  const rect = miniMap.getBoundingClientRect();
-  const factor = miniMap.width / canvasSize;
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-
-  cameraX = -x / factor * scale + canvas.width / 2;
-  cameraY = -y / factor * scale + canvas.height / 2;
-  drawAll();
-});
 
 // --- Color palette ---
 colors.forEach(c => {
@@ -268,25 +233,40 @@ moreColorsBtn.addEventListener("click", () => colorPopup.classList.toggle("hidde
 gridBtn.addEventListener("click", () => {
   showGrid = !showGrid;
   drawAll();
-  if (showGrid) gridBtn.classList.add("active");
-  else gridBtn.classList.remove("active");
+  gridBtn.classList.toggle("active", showGrid);
 });
 
-window.addEventListener("resize", () => drawAll());
+window.addEventListener("resize", drawAll);
 
-// --- Initial draw ---
-drawAll();
+// --- Login popup ---
+const loginPopup = document.createElement("div");
+loginPopup.id = "login-popup";
+loginPopup.textContent = "LOGIN DULU";
+loginPopup.style.cssText = `
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 20px 40px;
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 24px;
+  z-index: 100;
+  display: none;
+  cursor: pointer;
+`;
+document.body.appendChild(loginPopup);
 
-const loginPopup = document.getElementById("login-popup");
-
-// Show popup if user not logged in
-if (!currentUser) {
-  loginPopup.classList.remove("hidden");
-} else {
-  loginPopup.classList.add("hidden");
+function showLoginPopup() {
+  loginPopup.style.display = "flex";
+  setTimeout(() => (loginPopup.style.display = "none"), 2000);
 }
 
-// Optional: click popup to go to login page
 loginPopup.addEventListener("click", () => {
   window.location.href = "/login.html";
 });
+
+// --- Initial draw ---
+drawAll();

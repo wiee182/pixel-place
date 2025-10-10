@@ -5,44 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pixel Place</title>
   <link rel="stylesheet" href="style.css" />
+  <!-- Socket.IO client -->
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
+  <!-- Main Canvas -->
   <canvas id="canvas"></canvas>
 
   <!-- Login popup -->
-<div id="login-popup" class="hidden">
-  <div class="popup-content">
-    LOGIN DULU
+  <div id="login-popup" class="hidden">
+    <div class="popup-content">
+      LOGIN DULU
+    </div>
   </div>
-</div>
 
   <!-- Bottom Bar -->
   <div id="bottom-bar">
-  <div id="color-container">
-    <div id="color-square">
-      <div id="cooldown-overlay"></div>
-      <span id="points">10</span>
+    <div id="color-container">
+      <div id="color-square">
+        <div id="cooldown-overlay"></div>
+        <span id="points">10</span>
+      </div>
+      <button id="more-colors">+</button>
     </div>
-    <button id="more-colors">+</button>
-  </div>
-  <div id="bottom-actions">
-    <button id="toggle-grid">
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <rect class="grid-square" x="1" y="1" width="8" height="8"/>
-    <rect class="grid-square" x="11" y="1" width="8" height="8"/>
-    <rect class="grid-square" x="1" y="11" width="8" height="8"/>
-    <rect class="grid-square" x="11" y="11" width="8" height="8"/>
-  </svg>
-</button>
-  </div>
+    <div id="bottom-actions">
+      <button id="toggle-grid" class="active">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <rect class="grid-square" x="1" y="1" width="8" height="8"/>
+          <rect class="grid-square" x="11" y="1" width="8" height="8"/>
+          <rect class="grid-square" x="1" y="11" width="8" height="8"/>
+          <rect class="grid-square" x="11" y="11" width="8" height="8"/>
+        </svg>
+      </button>
+    </div>
   </div>
 
   <!-- Color Popup -->
   <div id="color-popup" class="hidden"></div>
 
-  <!-- Login Button (separated, near bottom bar) -->
+  <!-- Login Button -->
   <button id="login-btn">Login</button>
 
+  <!-- Mini-map (optional static placement) -->
+  <canvas id="minimap" width="200" height="200"></canvas>
+
+  <!-- Main Script -->
   <script src="script.js"></script>
 </body>
 </html>
