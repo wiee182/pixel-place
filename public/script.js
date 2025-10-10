@@ -180,9 +180,12 @@ function startCooldown(wait = 2) {
 canvas.addEventListener("mousedown", e => {
   if (e.button === 0) {
     isDrawing = true;
+    isDragging = false; // disable dragging when drawing
     drawPixel(e);
-  } else {
+  } else if (e.button === 1 || e.button === 2) {
+    // middle or right click drag
     isDragging = true;
+    isDrawing = false;
   }
   lastMouseX = e.clientX;
   lastMouseY = e.clientY;

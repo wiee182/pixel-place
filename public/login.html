@@ -1,51 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login - Pixel Place</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="login-container">
-    <h2>PIXEL PLACE</h2>
-    <p class="login-subtitle"></p>
-
-    <input type="text" id="username" placeholder="Username" />
-    <button id="login-submit">Login</button>
+    <h2>Login</h2>
+    <p class="login-subtitle">Masukkan username untuk lanjut</p>
+    <input type="text" id="username" placeholder="Username">
+    <button id="loginBtn">Login</button>
     <p id="login-msg"></p>
-
-    <p>Belum punya akun? <a href="/register.html" style="color:#1e90ff;">Register</a></p>
+    <p style="margin-top: 10px;">Belum punya akun? <a href="/register.html">Register</a></p>
   </div>
 
   <script>
-    const loginBtn = document.getElementById("login-submit");
-    const usernameInput = document.getElementById("username");
-    const loginMsg = document.getElementById("login-msg");
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const username = document.getElementById("username").value.trim();
+      const msg = document.getElementById("login-msg");
 
-    loginBtn.addEventListener("click", async () => {
-      const username = usernameInput.value.trim();
-      if (!username) return;
+      if (!username) {
+        msg.textContent = "Username tidak boleh kosong!";
+        msg.style.color = "red";
+        return;
+      }
 
       const res = await fetch("/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username })
       });
-
       const data = await res.json();
+
       if (data.success) {
         localStorage.setItem("username", data.username);
-        window.location.href = "/";
+        msg.style.color = "lime";
+        msg.textContent = "Login berhasil! Mengalihkan...";
+        setTimeout(() => window.location.href = "/", 1000);
       } else {
-        loginMsg.textContent = data.message;
-        loginMsg.style.color = "red";
+        msg.style.color = "red";
+        msg.textContent = data.message;
       }
     });
-
-    // Auto-redirect if already logged in
-    const storedUser = localStorage.getItem("username");
-    if (storedUser) window.location.href = "/";
   </script>
 </body>
 </html>
