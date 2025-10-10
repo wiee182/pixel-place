@@ -6,7 +6,11 @@ const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // allow all origins for Railway
+  },
+});
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -45,42 +49,51 @@ app.post("/login", (req, res) => {
   res.json({ success: true, username: clean });
 });
 
-// === Canvas Data ===
-const pixels = {}; // { "x,y": "#hexcolor" }
+// === Canvas pixel data ===
+const pixels = {}; // { "x,y": color }
 
-// === Socket.io ===
+// === Socket.IO events ===
 io.on("connection", (socket) => {
-  console.log("🟢 Connected:", socket.id);
-
+  console.log("🟢 User connected:", socket.id);
   socket.username = null;
   socket.lastPlace = 0;
 
-  // --- Login from client ---
+  // --- Login handshake ---
   socket.on("login", (username) => {
     if (users[username]) {
       socket.username = username;
-      console.log(`✅ ${username} logged in`);
       socket.emit("login_success", { username, points: users[username].points });
+      console.log(`✅ ${username} logged in`);
     } else {
       socket.emit("login_failed", "User not registered");
     }
   });
 
-  // --- Send all pixels to new user ---
+  socket.on("whoami", () => {
+    if (socket.username && users[socket.username]) {
+      socket.emit("login_success", {
+        username: socket.username,
+        points: users[socket.username].points,
+      });
+    }
+  });
+
+  // --- Send current pixel data ---
   socket.emit("init", pixels);
 
-  // --- Handle pixel placement ---
+  // --- Handle new pixel placement ---
   socket.on("place_pixel", ({ x, y, color }) => {
     if (!socket.username) {
-      return socket.emit("place_failed", { reason: "not_logged_in" });
+      socket.emit("place_failed", { reason: "not_logged_in" });
+      return;
     }
 
     const now = Date.now();
     const diff = now - socket.lastPlace;
-    const wait = 2000; // 2 sec cooldown
+    const cooldown = 2000; // 2 seconds
 
-    if (diff < wait) {
-      const remaining = Math.ceil((wait - diff) / 1000);
+    if (diff < cooldown) {
+      const remaining = Math.ceil((cooldown - diff) / 1000);
       socket.emit("place_failed", { reason: "cooldown", wait: remaining });
       return;
     }
@@ -88,8 +101,15 @@ io.on("connection", (socket) => {
     pixels[`${x},${y}`] = color;
     socket.lastPlace = now;
 
-    // Broadcast to all users
+    // broadcast to all clients
     io.emit("pixel", { x, y, color });
+
+    // update player points
+    if (users[socket.username]) {
+      users[socket.username].points = Math.max(0, users[socket.username].points - 1);
+      fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+      socket.emit("points_update", users[socket.username].points);
+    }
   });
 
   socket.on("disconnect", () => {
@@ -97,7 +117,8 @@ io.on("connection", (socket) => {
   });
 });
 
+// === Start server ===
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () =>
-  console.log(`✅ Server running on http://localhost:${PORT}`)
+  console.log(`✅ Server running at http://localhost:${PORT}`)
 );

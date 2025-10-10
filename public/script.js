@@ -1,4 +1,4 @@
-// --- Login check ---
+// --- User login status ---
 let currentUser = localStorage.getItem("username");
 
 // --- Canvas & DOM setup ---
@@ -36,21 +36,17 @@ let isOnCooldown = false;
 pointsDisplay.textContent = userPoints;
 cooldownOverlay.style.display = "none";
 
-// --- Setup canvas ---
+// --- Canvas setup ---
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 cameraX = (canvas.width - canvasSize * scale) / 2;
 cameraY = (canvas.height - canvasSize * scale) / 2;
-
 document.addEventListener("contextmenu", e => e.preventDefault());
 
 // --- Login button behavior ---
-if (currentUser && currentUser !== "null" && currentUser !== "undefined") {
+if (currentUser) {
   loginBtn.textContent = currentUser;
-  loginBtn.disabled = false;
-  loginBtn.addEventListener("click", () => {
-    alert(`You are logged in as ${currentUser}`);
-  });
+  loginBtn.disabled = true;
 } else {
   loginBtn.textContent = "Login";
   loginBtn.disabled = false;
@@ -59,42 +55,57 @@ if (currentUser && currentUser !== "null" && currentUser !== "undefined") {
   });
 }
 
-// --- Socket.IO setup ---
-const socket = io();
-
-// On connect, log user in automatically if saved
-socket.on("connect", () => {
-  if (currentUser) socket.emit("login", currentUser);
+// --- Socket.IO setup (works with Railway) ---
+const socket = io(window.location.origin, {
+  transports: ["websocket", "polling"],
 });
 
-// Confirm login success
-socket.on("login_success", ({ username, points }) => {
-  currentUser = username;
-  localStorage.setItem("username", username);
-  userPoints = points;
+// --- Login handshake ---
+if (currentUser) {
+  socket.emit("login", currentUser);
+  socket.emit("whoami");
+}
+
+socket.on("login_success", (data) => {
+  console.log("✅ Logged in as:", data.username);
+  currentUser = data.username;
+  userPoints = data.points || 10;
   pointsDisplay.textContent = userPoints;
-  loginBtn.textContent = username;
 });
 
-// --- Receive full canvas ---
+socket.on("login_failed", (msg) => {
+  console.warn("❌ Login failed:", msg);
+  currentUser = null;
+});
+
+// --- Receive initial pixels ---
 socket.on("init", (serverPixels) => {
   pixels.clear();
+  // serverPixels is an object (not array)
   Object.entries(serverPixels).forEach(([key, color]) => {
     pixels.set(key, color);
   });
   drawAll();
 });
 
-// --- Receive new pixel ---
+// --- Receive new pixel updates ---
 socket.on("pixel", ({ x, y, color }) => {
   pixels.set(`${x},${y}`, color);
   drawAll();
 });
 
-// --- Handle place failure ---
-socket.on("place_failed", (data) => {
-  if (data.reason === "not_logged_in") showLoginPopup();
-  if (data.reason === "cooldown") startCooldown(data.wait);
+// --- Handle placement errors ---
+socket.on("place_failed", ({ reason, wait }) => {
+  if (reason === "not_logged_in") showLoginPopup();
+  if (reason === "cooldown") {
+    startCooldown(wait);
+  }
+});
+
+// --- Points update ---
+socket.on("points_update", (points) => {
+  userPoints = points;
+  pointsDisplay.textContent = userPoints;
 });
 
 // --- Draw everything ---
@@ -129,34 +140,26 @@ function drawGrid() {
   }
 }
 
-// --- Draw pixel ---
+// --- Place pixel ---
 function drawPixel(e) {
   if (!currentUser) {
     showLoginPopup();
     return;
   }
   if (isOnCooldown) return;
-  if (userPoints <= 0) {
-    startCooldown();
-    return;
-  }
 
   const rect = canvas.getBoundingClientRect();
   const mouseX = e.clientX - rect.left;
   const mouseY = e.clientY - rect.top;
-
   const x = Math.floor((mouseX - cameraX) / scale);
   const y = Math.floor((mouseY - cameraY) / scale);
   if (x < 0 || y < 0 || x >= canvasSize || y >= canvasSize) return;
 
-  // ✅ Correct event name to match server
   socket.emit("place_pixel", { x, y, color: currentColor });
-  userPoints--;
-  pointsDisplay.textContent = userPoints;
 }
 
-// --- Cooldown ---
-function startCooldown(wait = 20) {
+// --- Cooldown system ---
+function startCooldown(wait = 2) {
   if (isOnCooldown) return;
   isOnCooldown = true;
   cooldownOverlay.style.display = "flex";
@@ -168,8 +171,6 @@ function startCooldown(wait = 20) {
     if (countdown <= 0) {
       clearInterval(interval);
       isOnCooldown = false;
-      userPoints = 10;
-      pointsDisplay.textContent = userPoints;
       cooldownOverlay.style.display = "none";
     }
   }, 1000);
