@@ -59,22 +59,15 @@ if (currentUser) {
 // --- Socket.IO setup ---
 const socket = io();
 
-// When connected, login automatically if saved user exists
-socket.on("connect", () => {
-  if (currentUser) {
-    socket.emit("login", currentUser);
-  }
-});
-
-// Receive full canvas
+// --- Receive full canvas ---
 socket.on("init", (serverPixels) => {
   pixels.clear();
-  Object.entries(serverPixels).forEach(([k, v]) => pixels.set(k, v));
+  serverPixels.forEach(([key, value]) => pixels.set(key, value));
   drawAll();
 });
 
-// Receive new pixel updates
-socket.on("pixel", ({ x, y, color }) => {
+// --- Receive new pixel updates ---
+socket.on("draw", ({ x, y, color }) => {
   pixels.set(`${x},${y}`, color);
   drawAll();
 });
@@ -131,7 +124,7 @@ function drawPixel(e) {
   const y = Math.floor((mouseY - cameraY) / scale);
   if (x < 0 || y < 0 || x >= canvasSize || y >= canvasSize) return;
 
-  socket.emit("place_pixel", { x, y, color: currentColor });
+  socket.emit("draw", { x, y, color: currentColor });
   userPoints--;
   pointsDisplay.textContent = userPoints;
 }
