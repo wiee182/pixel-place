@@ -45,9 +45,12 @@ cameraY = (canvas.height - canvasSize * scale) / 2;
 document.addEventListener("contextmenu", e => e.preventDefault());
 
 // --- Login button behavior ---
-if (currentUser) {
+if (currentUser && currentUser !== "null" && currentUser !== "undefined") {
   loginBtn.textContent = currentUser;
-  loginBtn.disabled = true;
+  loginBtn.disabled = false;
+  loginBtn.addEventListener("click", () => {
+    alert(`You are logged in as ${currentUser}`);
+  });
 } else {
   loginBtn.textContent = "Login";
   loginBtn.disabled = false;
@@ -59,17 +62,39 @@ if (currentUser) {
 // --- Socket.IO setup ---
 const socket = io();
 
+// On connect, log user in automatically if saved
+socket.on("connect", () => {
+  if (currentUser) socket.emit("login", currentUser);
+});
+
+// Confirm login success
+socket.on("login_success", ({ username, points }) => {
+  currentUser = username;
+  localStorage.setItem("username", username);
+  userPoints = points;
+  pointsDisplay.textContent = userPoints;
+  loginBtn.textContent = username;
+});
+
 // --- Receive full canvas ---
 socket.on("init", (serverPixels) => {
   pixels.clear();
-  serverPixels.forEach(([key, value]) => pixels.set(key, value));
+  Object.entries(serverPixels).forEach(([key, color]) => {
+    pixels.set(key, color);
+  });
   drawAll();
 });
 
-// --- Receive new pixel updates ---
-socket.on("draw", ({ x, y, color }) => {
+// --- Receive new pixel ---
+socket.on("pixel", ({ x, y, color }) => {
   pixels.set(`${x},${y}`, color);
   drawAll();
+});
+
+// --- Handle place failure ---
+socket.on("place_failed", (data) => {
+  if (data.reason === "not_logged_in") showLoginPopup();
+  if (data.reason === "cooldown") startCooldown(data.wait);
 });
 
 // --- Draw everything ---
@@ -124,17 +149,18 @@ function drawPixel(e) {
   const y = Math.floor((mouseY - cameraY) / scale);
   if (x < 0 || y < 0 || x >= canvasSize || y >= canvasSize) return;
 
-  socket.emit("draw", { x, y, color: currentColor });
+  // ✅ Correct event name to match server
+  socket.emit("place_pixel", { x, y, color: currentColor });
   userPoints--;
   pointsDisplay.textContent = userPoints;
 }
 
 // --- Cooldown ---
-function startCooldown() {
+function startCooldown(wait = 20) {
   if (isOnCooldown) return;
   isOnCooldown = true;
   cooldownOverlay.style.display = "flex";
-  let countdown = 20;
+  let countdown = wait;
   cooldownOverlay.textContent = countdown;
   const interval = setInterval(() => {
     countdown--;

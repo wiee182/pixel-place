@@ -1,9 +1,12 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const http = require("http");
+const { Server } = require("socket.io");
+
 const app = express();
-const http = require("http").createServer(app);
-const io = require("socket.io")(http);
+const server = http.createServer(app);
+const io = new Server(server);
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -42,40 +45,31 @@ app.post("/login", (req, res) => {
   res.json({ success: true, username: clean });
 });
 
-// === Canvas Storage ===
-const pixels = {}; // store as { "x,y": color }
+// === Canvas Data ===
+const pixels = {}; // { "x,y": "#hexcolor" }
 
 // === Socket.io ===
 io.on("connection", (socket) => {
-  console.log("New user:", socket.id);
+  console.log("🟢 Connected:", socket.id);
 
   socket.username = null;
   socket.lastPlace = 0;
 
-  // Login check from socket-client.js
+  // --- Login from client ---
   socket.on("login", (username) => {
     if (users[username]) {
       socket.username = username;
+      console.log(`✅ ${username} logged in`);
       socket.emit("login_success", { username, points: users[username].points });
     } else {
       socket.emit("login_failed", "User not registered");
     }
   });
 
-  // Send all pixels to client
+  // --- Send all pixels to new user ---
   socket.emit("init", pixels);
 
-  // Client requests their info
-  socket.on("whoami", () => {
-    if (socket.username && users[socket.username]) {
-      socket.emit("login_success", {
-        username: socket.username,
-        points: users[socket.username].points,
-      });
-    }
-  });
-
-  // Handle placing pixels
+  // --- Handle pixel placement ---
   socket.on("place_pixel", ({ x, y, color }) => {
     if (!socket.username) {
       return socket.emit("place_failed", { reason: "not_logged_in" });
@@ -83,7 +77,7 @@ io.on("connection", (socket) => {
 
     const now = Date.now();
     const diff = now - socket.lastPlace;
-    const wait = 2000; // 2 seconds cooldown
+    const wait = 2000; // 2 sec cooldown
 
     if (diff < wait) {
       const remaining = Math.ceil((wait - diff) / 1000);
@@ -93,14 +87,17 @@ io.on("connection", (socket) => {
 
     pixels[`${x},${y}`] = color;
     socket.lastPlace = now;
+
+    // Broadcast to all users
     io.emit("pixel", { x, y, color });
-    socket.emit("points_update", users[socket.username].points);
   });
 
   socket.on("disconnect", () => {
-    console.log("Disconnected:", socket.id);
+    console.log("🔴 Disconnected:", socket.id);
   });
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`✅ Server running at http://localhost:${PORT}`));
+server.listen(PORT, () =>
+  console.log(`✅ Server running on http://localhost:${PORT}`)
+);
