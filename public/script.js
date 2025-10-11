@@ -207,28 +207,31 @@ canvas.addEventListener("wheel", e => {
   drawAll();
 });
 
-// === Mobile Touch Controls ===
+// === Mobile Touch Controls (Fixed Accidental Draws) ===
 let lastTouchDistance = 0;
 let lastTouchCenter = null;
 let isTouchPanning = false;
+let isPinching = false;
 let lastTouchX = 0;
 let lastTouchY = 0;
 let lastTapTime = 0;
 
 canvas.addEventListener("touchstart", (e) => {
   const now = Date.now();
-  if (now - lastTapTime < 300) return; // prevent double-tap
+  if (now - lastTapTime < 250) return; // prevent double tap
   lastTapTime = now;
+
+  if (e.touches.length === 2) {
+    isPinching = true;
+    lastTouchDistance = getTouchDistance(e.touches);
+    lastTouchCenter = getTouchCenter(e.touches);
+    return;
+  }
 
   if (e.touches.length === 1) {
     const touch = e.touches[0];
     lastTouchX = touch.clientX;
     lastTouchY = touch.clientY;
-    drawPixel({ clientX: touch.clientX, clientY: touch.clientY });
-    isTouchPanning = true;
-  } else if (e.touches.length === 2) {
-    lastTouchDistance = getTouchDistance(e.touches);
-    lastTouchCenter = getTouchCenter(e.touches);
     isTouchPanning = false;
   }
 }, { passive: false });
@@ -236,6 +239,7 @@ canvas.addEventListener("touchstart", (e) => {
 canvas.addEventListener("touchmove", (e) => {
   if (e.touches.length === 2) {
     e.preventDefault();
+    isPinching = true;
     const newDistance = getTouchDistance(e.touches);
     const center = getTouchCenter(e.touches);
     const zoom = newDistance / lastTouchDistance;
@@ -245,20 +249,33 @@ canvas.addEventListener("touchmove", (e) => {
     scale = newScale;
     lastTouchDistance = newDistance;
     drawAll();
-  } else if (e.touches.length === 1 && isTouchPanning) {
+    return;
+  }
+
+  if (e.touches.length === 1 && !isPinching) {
     e.preventDefault();
     const touch = e.touches[0];
     const dx = touch.clientX - lastTouchX;
     const dy = touch.clientY - lastTouchY;
-    cameraX += dx;
-    cameraY += dy;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      isTouchPanning = true;
+      cameraX += dx;
+      cameraY += dy;
+      drawAll();
+    }
     lastTouchX = touch.clientX;
     lastTouchY = touch.clientY;
-    drawAll();
   }
 }, { passive: false });
 
-canvas.addEventListener("touchend", () => isTouchPanning = false);
+canvas.addEventListener("touchend", (e) => {
+  if (!isTouchPanning && !isPinching && e.touches.length === 0) {
+    const touch = e.changedTouches[0];
+    drawPixel({ clientX: touch.clientX, clientY: touch.clientY });
+  }
+  isTouchPanning = false;
+  isPinching = false;
+});
 
 function getTouchDistance(touches) {
   const dx = touches[0].clientX - touches[1].clientX;
@@ -291,7 +308,7 @@ function drawMiniMap() {
   }
 }
 
-// === Active user counter ===
+// === Active user counter (fixed persistent) ===
 const activeContainer = document.createElement("div");
 activeContainer.id = "active-users";
 activeContainer.innerHTML = `
@@ -310,7 +327,8 @@ Object.assign(activeContainer.style, {
 document.body.appendChild(activeContainer);
 const activeCount = document.getElementById("activeCount");
 
-// ✅ Correct active user event name
+// ensure active user counter updates on every reconnect
+socket.on("connect", () => socket.emit("whoami"));
 socket.on("active_users", (count) => {
   activeCount.textContent = count;
   activeCount.style.transform = "scale(1.3)";

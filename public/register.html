@@ -36,7 +36,7 @@
       const data = await res.json();
       if (data.success) {
         regMsg.style.color = "green";
-        regMsg.textContent = data.message + ". You can now login!";
+        regMsg.textContent = data.message + "";
       } else {
         regMsg.style.color = "red";
         regMsg.textContent = data.message;

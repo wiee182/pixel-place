@@ -21,7 +21,7 @@
       const msg = document.getElementById("login-msg");
 
       if (!username) {
-        msg.textContent = "Username tidak boleh kosong!";
+        msg.textContent = "Username empty!";
         msg.style.color = "red";
         return;
       }
@@ -36,7 +36,7 @@
       if (data.success) {
         localStorage.setItem("username", data.username);
         msg.style.color = "lime";
-        msg.textContent = "Login berhasil! Mengalihkan...";
+        msg.textContent = "Let's draw!";
         setTimeout(() => window.location.href = "/", 1000);
       } else {
         msg.style.color = "red";
