@@ -204,14 +204,19 @@ canvas.addEventListener("wheel", e => {
   drawAll();
 });
 
-// === Mobile Touch Controls (Improved Stable) ===
+// === Mobile Touch Controls (Fixed Tap + Accurate Pan/Zoom) ===
 let lastTouchDistance = 0;
 let lastTouchCenter = null;
 let isTouchPanning = false;
 let lastTouchX = 0;
 let lastTouchY = 0;
+let lastTapTime = 0; // prevent double tap
 
 canvas.addEventListener("touchstart", (e) => {
+  const now = Date.now();
+  if (now - lastTapTime < 250) return; // block double tap within 250ms
+  lastTapTime = now;
+
   if (e.touches.length === 1) {
     const touch = e.touches[0];
     lastTouchX = touch.clientX;
@@ -304,6 +309,8 @@ Object.assign(activeContainer.style, {
 document.body.appendChild(activeContainer);
 const activeCount = document.getElementById("activeCount");
 
+// FIX: listen on both connect + login to ensure updates always reach clients
+socket.on("connect", () => socket.emit("whoami"));
 socket.on("user_count", (count) => {
   activeCount.textContent = count;
   activeCount.style.transform = "scale(1.3)";
