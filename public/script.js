@@ -36,7 +36,6 @@ let isOnCooldown = false;
 pointsDisplay.textContent = userPoints;
 cooldownOverlay.style.display = "none";
 
-// --- Canvas setup ---
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 cameraX = (canvas.width - canvasSize * scale) / 2;
@@ -157,17 +156,8 @@ function startCooldown(wait = 20) {
   }, 1000);
 }
 
-// --- Prevent double draw from both touch + mouse ---
-let lastInputWasTouch = false;
-canvas.addEventListener("touchstart", () => {
-  lastInputWasTouch = true;
-  clearTimeout(window.touchFlagReset);
-  window.touchFlagReset = setTimeout(() => { lastInputWasTouch = false; }, 500);
-}, { passive: true });
-
 // === Mouse Controls ===
 canvas.addEventListener("mousedown", e => {
-  if (lastInputWasTouch) return; // ✅ skip mouse event after touch
   const now = Date.now();
   if (now - lastClickTime < 200) return;
   lastClickTime = now;
@@ -205,50 +195,59 @@ canvas.addEventListener("wheel", e => {
   drawAll();
 });
 
-// === Mobile Touch Controls ===
-let touchStartDist = 0, touchStartCenter = null;
-let lastScale = scale;
-let touchPanX = 0, touchPanY = 0;
-let isPinchZooming = false, isPanning = false;
+// === Mobile Touch Controls (fixed zoom + pan + tap) ===
+let startDist = 0, startCenter = null, startScale = scale;
+let isZooming = false, isTouchPanning = false;
+let lastTouchX = 0, lastTouchY = 0;
+
+canvas.addEventListener("touchstart", (e) => {
+  if (e.touches.length === 2) {
+    isZooming = true;
+    startDist = getTouchDistance(e.touches);
+    startCenter = getTouchCenter(e.touches);
+    startScale = scale;
+  } else if (e.touches.length === 1) {
+    isTouchPanning = false;
+    lastTouchX = e.touches[0].clientX;
+    lastTouchY = e.touches[0].clientY;
+  }
+}, { passive: false });
 
 canvas.addEventListener("touchmove", (e) => {
   if (e.touches.length === 2) {
     e.preventDefault();
     const newDist = getTouchDistance(e.touches);
     const center = getTouchCenter(e.touches);
-    const zoomFactor = newDist / touchStartDist;
-    const newScale = Math.max(1, Math.min(lastScale * zoomFactor, 40));
-    const smooth = 0.15;
-    cameraX -= (newScale - scale) * (center.x - cameraX) / scale * smooth;
-    cameraY -= (newScale - scale) * (center.y - cameraY) / scale * smooth;
-    scale = scale + (newScale - scale) * smooth;
+    const zoomFactor = newDist / startDist;
+    const newScale = Math.max(1, Math.min(startScale * zoomFactor, 40));
+    const smooth = 0.25;
+    scale += (newScale - scale) * smooth;
+    cameraX -= (center.x - cameraX) * (newScale / scale - 1);
+    cameraY -= (center.y - cameraY) * (newScale / scale - 1);
     drawAll();
-  } else if (e.touches.length === 1 && !isPinchZooming) {
+  } else if (e.touches.length === 1 && !isZooming) {
     e.preventDefault();
     const touch = e.touches[0];
-    const dx = touch.clientX - touchPanX;
-    const dy = touch.clientY - touchPanY;
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
-      isPanning = true;
+    const dx = touch.clientX - lastTouchX;
+    const dy = touch.clientY - lastTouchY;
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+      isTouchPanning = true;
       cameraX += dx;
       cameraY += dy;
       drawAll();
     }
-    touchPanX = touch.clientX;
-    touchPanY = touch.clientY;
+    lastTouchX = touch.clientX;
+    lastTouchY = touch.clientY;
   }
 }, { passive: false });
 
 canvas.addEventListener("touchend", (e) => {
-  if (e.touches.length === 0) {
-    if (!isPanning && !isPinchZooming && e.changedTouches.length === 1) {
-      const touch = e.changedTouches[0];
-      drawPixel({ clientX: touch.clientX, clientY: touch.clientY });
-    }
-    lastScale = scale;
-    isPinchZooming = false;
-    isPanning = false;
+  if (!isTouchPanning && !isZooming && e.changedTouches.length === 1) {
+    const touch = e.changedTouches[0];
+    drawPixel({ clientX: touch.clientX, clientY: touch.clientY });
   }
+  isZooming = false;
+  isTouchPanning = false;
 });
 
 function getTouchDistance(touches) {
