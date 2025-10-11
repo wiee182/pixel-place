@@ -160,7 +160,7 @@ function startCooldown(wait = 20) {
 // === Mouse Controls ===
 canvas.addEventListener("mousedown", e => {
   const now = Date.now();
-  if (now - lastClickTime < 200) return; // prevent double-click
+  if (now - lastClickTime < 200) return;
   lastClickTime = now;
 
   if (e.button === 0) {
@@ -196,71 +196,63 @@ canvas.addEventListener("wheel", e => {
   drawAll();
 });
 
-// === Mobile Touch Controls (smooth zoom + no accidental draw) ===
-let lastTouchDistance = 0, lastTouchCenter = null;
-let isTouchPanning = false, isPinching = false;
-let lastTouchX = 0, lastTouchY = 0, lastTapTime = 0;
+// === Mobile Touch Controls (smooth & accurate) ===
+let touchStartDist = 0, touchStartCenter = null;
+let lastScale = scale;
+let touchPanX = 0, touchPanY = 0;
+let isPinchZooming = false, isPanning = false;
 
 canvas.addEventListener("touchstart", (e) => {
-  const now = Date.now();
-  if (now - lastTapTime < 300) return; // prevent double-tap
-  lastTapTime = now;
-
   if (e.touches.length === 2) {
-    isPinching = true;
-    lastTouchDistance = getTouchDistance(e.touches);
-    lastTouchCenter = getTouchCenter(e.touches);
-    return;
-  }
-
-  if (e.touches.length === 1) {
+    isPinchZooming = true;
+    touchStartDist = getTouchDistance(e.touches);
+    touchStartCenter = getTouchCenter(e.touches);
+  } else if (e.touches.length === 1) {
     const touch = e.touches[0];
-    lastTouchX = touch.clientX;
-    lastTouchY = touch.clientY;
-    isTouchPanning = false;
+    touchPanX = touch.clientX;
+    touchPanY = touch.clientY;
+    isPanning = false;
   }
 }, { passive: false });
 
 canvas.addEventListener("touchmove", (e) => {
   if (e.touches.length === 2) {
     e.preventDefault();
-    isPinching = true;
-    const newDistance = getTouchDistance(e.touches);
+    const newDist = getTouchDistance(e.touches);
     const center = getTouchCenter(e.touches);
-    const zoom = newDistance / lastTouchDistance;
-    const newScale = Math.max(1, Math.min(scale * zoom, 40));
-    const smooth = 0.2;
+    const zoomFactor = newDist / touchStartDist;
+    const newScale = Math.max(1, Math.min(lastScale * zoomFactor, 40));
+    const smooth = 0.15;
     cameraX -= (newScale - scale) * (center.x - cameraX) / scale * smooth;
     cameraY -= (newScale - scale) * (center.y - cameraY) / scale * smooth;
-    scale = newScale;
-    lastTouchDistance = newDistance;
+    scale = scale + (newScale - scale) * smooth;
     drawAll();
-    return;
-  }
-
-  if (e.touches.length === 1 && !isPinching) {
+  } else if (e.touches.length === 1 && !isPinchZooming) {
     e.preventDefault();
     const touch = e.touches[0];
-    const dx = touch.clientX - lastTouchX;
-    const dy = touch.clientY - lastTouchY;
+    const dx = touch.clientX - touchPanX;
+    const dy = touch.clientY - touchPanY;
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
-      isTouchPanning = true;
+      isPanning = true;
       cameraX += dx;
       cameraY += dy;
       drawAll();
     }
-    lastTouchX = touch.clientX;
-    lastTouchY = touch.clientY;
+    touchPanX = touch.clientX;
+    touchPanY = touch.clientY;
   }
 }, { passive: false });
 
 canvas.addEventListener("touchend", (e) => {
-  if (!isTouchPanning && !isPinching && e.touches.length === 0) {
-    const touch = e.changedTouches[0];
-    drawPixel({ clientX: touch.clientX, clientY: touch.clientY });
+  if (e.touches.length === 0) {
+    if (!isPanning && !isPinchZooming && e.changedTouches.length === 1) {
+      const touch = e.changedTouches[0];
+      drawPixel({ clientX: touch.clientX, clientY: touch.clientY });
+    }
+    lastScale = scale;
+    isPinchZooming = false;
+    isPanning = false;
   }
-  isTouchPanning = false;
-  isPinching = false;
 });
 
 function getTouchDistance(touches) {
@@ -275,7 +267,7 @@ function getTouchCenter(touches) {
   };
 }
 
-// === Mini Map ===
+// === Mini Map & Active Counter ===
 const miniMap = document.createElement("canvas");
 miniMap.id = "minimap";
 miniMap.width = 200;
@@ -318,8 +310,6 @@ socket.on("active_users", (count) => {
   activeCount.style.transform = "scale(1.3)";
   setTimeout(() => activeCount.style.transform = "scale(1)", 200);
 });
-
-// Request active user count periodically
 setInterval(() => socket.emit("get_active_users"), 3000);
 
 // === Color Palette ===
