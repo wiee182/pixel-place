@@ -1,20 +1,16 @@
-// --- socket-client.js ---
 const socket = io();
-
 let me = {
   username: localStorage.getItem("pp_username") || null,
   points: 10,
 };
 
-// --- On connect ---
+// --- Connect ---
 socket.on("connect", () => {
-  if (me.username) {
-    socket.emit("login", me.username);
-  }
+  if (me.username) socket.emit("login", me.username);
   socket.emit("whoami");
 });
 
-// --- Initialize canvas ---
+// --- Init pixels ---
 socket.on("init", (pixelsObj) => {
   if (typeof pixels !== "undefined" && pixels instanceof Map) {
     pixels.clear();
@@ -23,7 +19,7 @@ socket.on("init", (pixelsObj) => {
   }
 });
 
-// --- Receive pixel update ---
+// --- Pixel update ---
 socket.on("updatePixel", ({ x, y, color }) => {
   if (typeof pixels !== "undefined" && pixels instanceof Map) {
     pixels.set(`${x},${y}`, color);
@@ -37,42 +33,28 @@ socket.on("login_success", (payload) => {
   me.points = payload.points;
   localStorage.setItem("pp_username", me.username);
 
-  const loginBtn = document.getElementById("login-btn");
+  const btn = document.getElementById("login-btn");
   const pointsEl = document.getElementById("points");
-  if (loginBtn) {
-    loginBtn.textContent = me.username;
-    loginBtn.disabled = true;
-  }
+  if (btn) { btn.textContent = me.username; btn.disabled = true; }
   if (pointsEl) pointsEl.textContent = me.points;
-  console.log("Logged in as", me.username);
 });
 
 // --- Points update ---
-socket.on("points_update", (data) => {
-  me.points = data.points ?? data;
-  const pointsEl = document.getElementById("points");
-  if (pointsEl) pointsEl.textContent = me.points;
+socket.on("points_update", (points) => {
+  me.points = points;
+  const el = document.getElementById("points");
+  if (el) el.textContent = points;
 });
 
 // --- Cooldown started ---
 socket.on("cooldown_started", ({ wait }) => {
-  const overlay = document.getElementById("cooldown-overlay");
-  if (!overlay) return;
-  overlay.style.display = "flex";
-  overlay.textContent = wait;
+  showCooldown(wait);
+});
 
-  let remaining = wait;
-  const interval = setInterval(() => {
-    remaining--;
-    overlay.textContent = remaining;
-    if (remaining <= 0) {
-      clearInterval(interval);
-      overlay.style.display = "none";
-      overlay.textContent = "";
-      // Ask server for refreshed points
-      socket.emit("whoami");
-    }
-  }, 1000);
+// --- Cooldown tick (live update every second) ---
+socket.on("cooldown_tick", ({ remaining }) => {
+  const overlay = document.getElementById("cooldown-overlay");
+  if (overlay) overlay.textContent = remaining;
 });
 
 // --- Place pixel ---
@@ -84,27 +66,23 @@ function socketEmitPlace(x, y, color) {
   socket.emit("drawPixel", { x, y, color });
 }
 
-// Optional: handle place failures
+// --- Cooldown UI ---
+function showCooldown(seconds) {
+  const overlay = document.getElementById("cooldown-overlay");
+  if (!overlay) return;
+  overlay.style.display = "flex";
+  overlay.textContent = seconds;
+
+  const hide = () => {
+    overlay.style.display = "none";
+    overlay.textContent = "";
+  };
+
+  setTimeout(hide, seconds * 1000);
+}
+
+// --- Place failed ---
 socket.on("place_failed", (data) => {
-  if (data.reason === "not_logged_in") {
-    alert("Please log in first!");
-  } else if (data.reason === "cooldown") {
-    const wait = data.wait || 20;
-    const overlay = document.getElementById("cooldown-overlay");
-    if (overlay) {
-      overlay.style.display = "flex";
-      overlay.textContent = wait;
-      let remaining = wait;
-      const interval = setInterval(() => {
-        remaining--;
-        overlay.textContent = remaining;
-        if (remaining <= 0) {
-          clearInterval(interval);
-          overlay.style.display = "none";
-          overlay.textContent = "";
-          socket.emit("whoami");
-        }
-      }, 1000);
-    }
-  }
+  if (data.reason === "cooldown") showCooldown(data.wait || 20);
+  if (data.reason === "not_logged_in") alert("Please log in first!");
 });

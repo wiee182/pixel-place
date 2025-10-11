@@ -17,12 +17,12 @@ if (fs.existsSync(usersFile)) {
   users = JSON.parse(fs.readFileSync(usersFile));
 }
 
-// Save users to file
+// Helper: save users
 function saveUsers() {
   fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 }
 
-// === Register route ===
+// === Register ===
 app.post("/register", (req, res) => {
   const { username } = req.body;
   if (!username || username.trim() === "")
@@ -37,7 +37,7 @@ app.post("/register", (req, res) => {
   res.json({ success: true, message: "Registration successful" });
 });
 
-// === Login route ===
+// === Login ===
 app.post("/login", (req, res) => {
   const { username } = req.body;
   if (!username || username.trim() === "")
@@ -56,19 +56,19 @@ const pixels = {}; // { "x,y": color }
 // === Socket.IO ===
 io.on("connection", (socket) => {
   console.log("🟢", socket.id, "connected");
-
   socket.username = null;
 
   socket.on("login", (username) => {
     if (users[username]) {
       socket.username = username;
       const user = users[username];
-
-      // Check if user is still on cooldown
       const now = Date.now();
+
+      // Check cooldown
       if (user.cooldownEnd && user.cooldownEnd > now) {
         const remaining = Math.ceil((user.cooldownEnd - now) / 1000);
         socket.emit("cooldown_started", { wait: remaining });
+        startCountdown(socket, user, remaining); // resume countdown
       }
 
       socket.emit("login_success", { username, points: user.points });
@@ -84,10 +84,10 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Send existing pixels
+  // Send current pixels
   socket.emit("init", pixels);
 
-  // --- Handle pixel placement ---
+  // Handle draw
   socket.on("drawPixel", ({ x, y, color }) => {
     const user = users[socket.username];
     if (!socket.username || !user) {
@@ -103,7 +103,6 @@ io.on("connection", (socket) => {
     }
 
     if (user.points <= 0) {
-      // Start cooldown
       startCooldown(socket, user);
       return;
     }
@@ -112,15 +111,12 @@ io.on("connection", (socket) => {
     pixels[`${x},${y}`] = color;
     io.emit("updatePixel", { x, y, color });
 
-    // Deduct point
+    // Deduct a point
     user.points -= 1;
     saveUsers();
     socket.emit("points_update", user.points);
 
-    // If no points left, start cooldown
-    if (user.points <= 0) {
-      startCooldown(socket, user);
-    }
+    if (user.points <= 0) startCooldown(socket, user);
   });
 
   socket.on("disconnect", () => {
@@ -128,15 +124,17 @@ io.on("connection", (socket) => {
   });
 });
 
-// === Cooldown logic ===
+// === Cooldown Logic ===
 function startCooldown(socket, user) {
-  const cooldownDuration = 20 * 1000; // 20 seconds
+  const duration = 20 * 1000;
   const now = Date.now();
 
-  user.cooldownEnd = now + cooldownDuration;
+  user.cooldownEnd = now + duration;
   saveUsers();
 
-  socket.emit("cooldown_started", { wait: cooldownDuration / 1000 });
+  const wait = duration / 1000;
+  socket.emit("cooldown_started", { wait });
+  startCountdown(socket, user, wait);
 
   setTimeout(() => {
     user.points = 10;
@@ -144,9 +142,24 @@ function startCooldown(socket, user) {
     saveUsers();
     socket.emit("points_update", user.points);
     socket.emit("login_success", { username: user.username, points: user.points });
-  }, cooldownDuration);
+  }, duration);
 }
 
-// === Start server ===
+function startCountdown(socket, user, secondsLeft) {
+  let remaining = secondsLeft;
+  const interval = setInterval(() => {
+    const now = Date.now();
+    if (!user.cooldownEnd || user.cooldownEnd <= now) {
+      clearInterval(interval);
+      return;
+    }
+    remaining = Math.ceil((user.cooldownEnd - now) / 1000);
+    socket.emit("cooldown_tick", { remaining });
+  }, 1000);
+}
+
+// === Start Server ===
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
+server.listen(PORT, () =>
+  console.log(`✅ Server running on http://localhost:${PORT}`)
+);
