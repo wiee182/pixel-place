@@ -8,13 +8,14 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // allow all origins for Railway
+    origin: "*", // allow all origins (for Railway or local)
   },
 });
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+// === Load users ===
 const usersFile = path.join(__dirname, "users.json");
 let users = {};
 if (fs.existsSync(usersFile)) {
@@ -52,11 +53,11 @@ app.post("/login", (req, res) => {
 // === Canvas pixel data ===
 const pixels = {}; // { "x,y": color }
 
-// === Socket.IO events ===
+// === Socket.IO ===
 io.on("connection", (socket) => {
   console.log("🟢 User connected:", socket.id);
   socket.username = null;
-  socket.lastPlace = 0;
+  socket.cooldownActive = false;
 
   // --- Login handshake ---
   socket.on("login", (username) => {
@@ -69,6 +70,7 @@ io.on("connection", (socket) => {
     }
   });
 
+  // --- Send current user info ---
   socket.on("whoami", () => {
     if (socket.username && users[socket.username]) {
       socket.emit("login_success", {
@@ -78,37 +80,41 @@ io.on("connection", (socket) => {
     }
   });
 
-  // --- Send current pixel data ---
+  // --- Send current canvas data ---
   socket.emit("init", pixels);
 
-  // --- Handle new pixel placement ---
-  socket.on("place_pixel", ({ x, y, color }) => {
-    if (!socket.username) {
+  // --- Place pixel ---
+  socket.on("drawPixel", ({ x, y, color }) => {
+    const user = users[socket.username];
+    if (!socket.username || !user) {
       socket.emit("place_failed", { reason: "not_logged_in" });
       return;
     }
 
-    const now = Date.now();
-    const diff = now - socket.lastPlace;
-    const cooldown = 2000; // 2 seconds
-
-    if (diff < cooldown) {
-      const remaining = Math.ceil((cooldown - diff) / 1000);
-      socket.emit("place_failed", { reason: "cooldown", wait: remaining });
+    // Check cooldown
+    if (socket.cooldownActive) {
+      socket.emit("place_failed", { reason: "cooldown", wait: socket.cooldownRemaining || 20 });
       return;
     }
 
+    // Check available points
+    if (user.points <= 0) {
+      startCooldown(socket, user);
+      return;
+    }
+
+    // Draw pixel
     pixels[`${x},${y}`] = color;
-    socket.lastPlace = now;
+    io.emit("updatePixel", { x, y, color });
 
-    // broadcast to all clients
-    io.emit("pixel", { x, y, color });
+    // Decrease user points
+    user.points -= 1;
+    socket.emit("points_update", user.points);
+    fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 
-    // update player points
-    if (users[socket.username]) {
-      users[socket.username].points = Math.max(0, users[socket.username].points - 1);
-      fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
-      socket.emit("points_update", users[socket.username].points);
+    // If points reach zero → start cooldown
+    if (user.points <= 0) {
+      startCooldown(socket, user);
     }
   });
 
@@ -116,6 +122,28 @@ io.on("connection", (socket) => {
     console.log("🔴 Disconnected:", socket.id);
   });
 });
+
+// === Helper: Cooldown system ===
+function startCooldown(socket, user) {
+  if (socket.cooldownActive) return;
+
+  socket.cooldownActive = true;
+  socket.cooldownRemaining = 20;
+  socket.emit("cooldown_started", { wait: socket.cooldownRemaining });
+
+  const countdown = setInterval(() => {
+    socket.cooldownRemaining -= 1;
+
+    if (socket.cooldownRemaining <= 0) {
+      clearInterval(countdown);
+      socket.cooldownActive = false;
+      user.points = 10; // Reset points after cooldown
+      fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+      socket.emit("points_update", user.points);
+      socket.emit("login_success", { username: user.username, points: user.points });
+    }
+  }, 1000);
+}
 
 // === Start server ===
 const PORT = process.env.PORT || 3000;
