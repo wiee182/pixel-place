@@ -20,7 +20,6 @@ if (fs.existsSync(usersFile)) {
 let pixels = {}; // { "x,y": color }
 let onlineUsers = new Set(); // track currently active usernames
 
-// === Helper: save users ===
 function saveUsers() {
   fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 }
@@ -58,8 +57,9 @@ io.on("connection", (socket) => {
   console.log("🟢", socket.id, "connected");
   socket.username = null;
 
-  // Send current canvas on connect
+  // Send current canvas + active user count
   socket.emit("init", pixels);
+  socket.emit("user_count", onlineUsers.size);
 
   // === User login ===
   socket.on("login", (username) => {
@@ -69,7 +69,7 @@ io.on("connection", (socket) => {
       const now = Date.now();
 
       onlineUsers.add(username);
-      io.emit("active_users", onlineUsers.size); // ✅ broadcast active user count
+      io.emit("user_count", onlineUsers.size); // ✅ broadcast active users count
 
       // Resume cooldown if needed
       if (user.cooldownEnd && user.cooldownEnd > now) {
@@ -129,7 +129,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     if (socket.username) {
       onlineUsers.delete(socket.username);
-      io.emit("active_users", onlineUsers.size); // ✅ broadcast active user count update
+      io.emit("user_count", onlineUsers.size); // ✅ broadcast update
       console.log(`🔴 ${socket.username} disconnected`);
     } else {
       console.log("🔴 Unknown user disconnected");

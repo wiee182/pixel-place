@@ -29,6 +29,7 @@ let cameraY = 0;
 let isDrawing = false;
 let isDragging = false;
 let lastMouseX, lastMouseY;
+let lastClickTime = 0; // Prevent double click spam
 
 let userPoints = 10;
 let isOnCooldown = false;
@@ -50,9 +51,7 @@ if (currentUser) {
 } else {
   loginBtn.textContent = "Login";
   loginBtn.disabled = false;
-  loginBtn.addEventListener("click", () => {
-    window.location.href = "/login.html";
-  });
+  loginBtn.addEventListener("click", () => window.location.href = "/login.html");
 }
 
 // --- Socket.IO setup ---
@@ -169,6 +168,10 @@ function startCooldown(wait = 20) {
 
 // === Desktop Mouse Controls ===
 canvas.addEventListener("mousedown", e => {
+  const now = Date.now();
+  if (now - lastClickTime < 200) return; // prevent double-click spam
+  lastClickTime = now;
+
   if (e.button === 0) {
     isDrawing = true;
     isDragging = false;
@@ -204,17 +207,17 @@ canvas.addEventListener("wheel", e => {
   drawAll();
 });
 
-// === Mobile Touch Controls (Fixed Tap + Accurate Pan/Zoom) ===
+// === Mobile Touch Controls ===
 let lastTouchDistance = 0;
 let lastTouchCenter = null;
 let isTouchPanning = false;
 let lastTouchX = 0;
 let lastTouchY = 0;
-let lastTapTime = 0; // prevent double tap
+let lastTapTime = 0;
 
 canvas.addEventListener("touchstart", (e) => {
   const now = Date.now();
-  if (now - lastTapTime < 250) return; // block double tap within 250ms
+  if (now - lastTapTime < 300) return; // prevent double-tap
   lastTapTime = now;
 
   if (e.touches.length === 1) {
@@ -237,10 +240,8 @@ canvas.addEventListener("touchmove", (e) => {
     const center = getTouchCenter(e.touches);
     const zoom = newDistance / lastTouchDistance;
     const newScale = Math.max(1, Math.min(scale * zoom, 40));
-
     cameraX -= (newScale - scale) * (center.x - cameraX) / scale;
     cameraY -= (newScale - scale) * (center.y - cameraY) / scale;
-
     scale = newScale;
     lastTouchDistance = newDistance;
     drawAll();
@@ -257,9 +258,7 @@ canvas.addEventListener("touchmove", (e) => {
   }
 }, { passive: false });
 
-canvas.addEventListener("touchend", () => {
-  isTouchPanning = false;
-});
+canvas.addEventListener("touchend", () => isTouchPanning = false);
 
 function getTouchDistance(touches) {
   const dx = touches[0].clientX - touches[1].clientX;
@@ -295,7 +294,9 @@ function drawMiniMap() {
 // === Active user counter ===
 const activeContainer = document.createElement("div");
 activeContainer.id = "active-users";
-activeContainer.innerHTML = `<span style="font-size:16px;opacity:0.9">👥</span><span id="activeCount" style="font-weight:700;text-shadow:0 0 10px rgba(0,255,180,0.8);transition:all 0.25s ease-in-out">0</span>`;
+activeContainer.innerHTML = `
+  <span style="font-size:16px;opacity:0.9">👥</span>
+  <span id="activeCount" style="font-weight:700;text-shadow:0 0 10px rgba(0,255,180,0.8);transition:all 0.25s ease-in-out">0</span>`;
 Object.assign(activeContainer.style, {
   display: "flex", alignItems: "center", justifyContent: "center",
   gap: "6px", marginTop: "8px", fontFamily: "Inter, sans-serif",
@@ -309,9 +310,8 @@ Object.assign(activeContainer.style, {
 document.body.appendChild(activeContainer);
 const activeCount = document.getElementById("activeCount");
 
-// FIX: listen on both connect + login to ensure updates always reach clients
-socket.on("connect", () => socket.emit("whoami"));
-socket.on("user_count", (count) => {
+// ✅ Correct active user event name
+socket.on("active_users", (count) => {
   activeCount.textContent = count;
   activeCount.style.transform = "scale(1.3)";
   activeContainer.style.boxShadow = "0 0 12px rgba(0,255,180,0.6)";
