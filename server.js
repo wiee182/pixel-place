@@ -69,7 +69,7 @@ io.on("connection", (socket) => {
       const now = Date.now();
 
       onlineUsers.add(username);
-      io.emit("user_count", onlineUsers.size); // broadcast active users count
+      io.emit("active_users", onlineUsers.size); // ✅ broadcast active user count
 
       // Resume cooldown if needed
       if (user.cooldownEnd && user.cooldownEnd > now) {
@@ -129,7 +129,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     if (socket.username) {
       onlineUsers.delete(socket.username);
-      io.emit("user_count", onlineUsers.size);
+      io.emit("active_users", onlineUsers.size); // ✅ broadcast active user count update
       console.log(`🔴 ${socket.username} disconnected`);
     } else {
       console.log("🔴 Unknown user disconnected");
