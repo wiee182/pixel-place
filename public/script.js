@@ -204,23 +204,28 @@ canvas.addEventListener("wheel", e => {
   drawAll();
 });
 
-// === Mobile Touch Controls (Stable) ===
+// === Mobile Touch Controls (Improved Stable) ===
 let lastTouchDistance = 0;
 let lastTouchCenter = null;
-canvas.addEventListener("touchstart", e => {
+let isTouchPanning = false;
+let lastTouchX = 0;
+let lastTouchY = 0;
+
+canvas.addEventListener("touchstart", (e) => {
   if (e.touches.length === 1) {
-    // Single finger → draw
     const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
+    lastTouchX = touch.clientX;
+    lastTouchY = touch.clientY;
     drawPixel({ clientX: touch.clientX, clientY: touch.clientY });
+    isTouchPanning = true;
   } else if (e.touches.length === 2) {
-    // Two fingers → start zoom
     lastTouchDistance = getTouchDistance(e.touches);
     lastTouchCenter = getTouchCenter(e.touches);
+    isTouchPanning = false;
   }
 }, { passive: false });
 
-canvas.addEventListener("touchmove", e => {
+canvas.addEventListener("touchmove", (e) => {
   if (e.touches.length === 2) {
     e.preventDefault();
     const newDistance = getTouchDistance(e.touches);
@@ -234,15 +239,28 @@ canvas.addEventListener("touchmove", e => {
     scale = newScale;
     lastTouchDistance = newDistance;
     drawAll();
+  } else if (e.touches.length === 1 && isTouchPanning) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const dx = touch.clientX - lastTouchX;
+    const dy = touch.clientY - lastTouchY;
+    cameraX += dx;
+    cameraY += dy;
+    lastTouchX = touch.clientX;
+    lastTouchY = touch.clientY;
+    drawAll();
   }
 }, { passive: false });
+
+canvas.addEventListener("touchend", () => {
+  isTouchPanning = false;
+});
 
 function getTouchDistance(touches) {
   const dx = touches[0].clientX - touches[1].clientX;
   const dy = touches[0].clientY - touches[1].clientY;
   return Math.sqrt(dx * dx + dy * dy);
 }
-
 function getTouchCenter(touches) {
   return {
     x: (touches[0].clientX + touches[1].clientX) / 2,
