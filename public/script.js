@@ -65,16 +65,12 @@ if (currentUser) {
 }
 
 socket.on("login_success", (data) => {
-  console.log("✅ Logged in as:", data.username);
   currentUser = data.username;
   userPoints = data.points || 10;
   pointsDisplay.textContent = userPoints;
 });
 
-socket.on("login_failed", (msg) => {
-  console.warn("❌ Login failed:", msg);
-  currentUser = null;
-});
+socket.on("login_failed", () => { currentUser = null; });
 
 // --- Receive initial pixels ---
 socket.on("init", (serverPixels) => {
@@ -100,17 +96,15 @@ socket.on("points_update", (points) => {
   pointsDisplay.textContent = userPoints;
 });
 
-// --- Draw everything ---
+// === Draw all ===
 function drawAll() {
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   for (let [key, color] of pixels) {
     const [x, y] = key.split(",").map(Number);
     ctx.fillStyle = color;
     ctx.fillRect(x * scale + cameraX, y * scale + cameraY, scale, scale);
   }
-
   if (showGrid) drawGrid();
   drawMiniMap();
 }
@@ -132,7 +126,7 @@ function drawGrid() {
   }
 }
 
-// --- Place pixel ---
+// === Pixel placement ===
 function drawPixel(e) {
   if (!currentUser) {
     window.location.href = "/login.html";
@@ -148,14 +142,12 @@ function drawPixel(e) {
   if (x < 0 || y < 0 || x >= canvasSize || y >= canvasSize) return;
 
   socket.emit("drawPixel", { x, y, color: currentColor });
-
   userPoints--;
   pointsDisplay.textContent = userPoints;
-
   if (userPoints <= 0) startCooldown(20);
 }
 
-// --- Cooldown system ---
+// === Cooldown ===
 function startCooldown(wait = 20) {
   if (isOnCooldown) return;
   isOnCooldown = true;
@@ -175,7 +167,7 @@ function startCooldown(wait = 20) {
   }, 1000);
 }
 
-// --- Mouse events ---
+// === Desktop Mouse Controls ===
 canvas.addEventListener("mousedown", e => {
   if (e.button === 0) {
     isDrawing = true;
@@ -188,12 +180,7 @@ canvas.addEventListener("mousedown", e => {
   lastMouseX = e.clientX;
   lastMouseY = e.clientY;
 });
-
-canvas.addEventListener("mouseup", () => {
-  isDrawing = false;
-  isDragging = false;
-});
-
+canvas.addEventListener("mouseup", () => { isDrawing = false; isDragging = false; });
 canvas.addEventListener("mousemove", e => {
   if (isDrawing) drawPixel(e);
   if (isDragging) {
@@ -204,7 +191,6 @@ canvas.addEventListener("mousemove", e => {
     drawAll();
   }
 });
-
 canvas.addEventListener("wheel", e => {
   e.preventDefault();
   const zoom = e.deltaY < 0 ? 1.1 : 0.9;
@@ -218,7 +204,53 @@ canvas.addEventListener("wheel", e => {
   drawAll();
 });
 
-// --- Mini Map ---
+// === Mobile Touch Controls (Stable) ===
+let lastTouchDistance = 0;
+let lastTouchCenter = null;
+canvas.addEventListener("touchstart", e => {
+  if (e.touches.length === 1) {
+    // Single finger → draw
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    drawPixel({ clientX: touch.clientX, clientY: touch.clientY });
+  } else if (e.touches.length === 2) {
+    // Two fingers → start zoom
+    lastTouchDistance = getTouchDistance(e.touches);
+    lastTouchCenter = getTouchCenter(e.touches);
+  }
+}, { passive: false });
+
+canvas.addEventListener("touchmove", e => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const newDistance = getTouchDistance(e.touches);
+    const center = getTouchCenter(e.touches);
+    const zoom = newDistance / lastTouchDistance;
+    const newScale = Math.max(1, Math.min(scale * zoom, 40));
+
+    cameraX -= (newScale - scale) * (center.x - cameraX) / scale;
+    cameraY -= (newScale - scale) * (center.y - cameraY) / scale;
+
+    scale = newScale;
+    lastTouchDistance = newDistance;
+    drawAll();
+  }
+}, { passive: false });
+
+function getTouchDistance(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function getTouchCenter(touches) {
+  return {
+    x: (touches[0].clientX + touches[1].clientX) / 2,
+    y: (touches[0].clientY + touches[1].clientY) / 2
+  };
+}
+
+// === Mini Map ===
 const miniMap = document.createElement("canvas");
 miniMap.id = "minimap";
 miniMap.width = 200;
@@ -237,45 +269,24 @@ function drawMiniMap() {
   }
 }
 
-// --- Active user counter (👥) ---
+// === Active user counter ===
 const activeContainer = document.createElement("div");
 activeContainer.id = "active-users";
+activeContainer.innerHTML = `<span style="font-size:16px;opacity:0.9">👥</span><span id="activeCount" style="font-weight:700;text-shadow:0 0 10px rgba(0,255,180,0.8);transition:all 0.25s ease-in-out">0</span>`;
 Object.assign(activeContainer.style, {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "6px",
-  position: "fixed",
-  bottom: "90px",
-  left: "50%",
-  transform: "translateX(-50%)",
-  background: "rgba(0,0,0,0.35)",
-  backdropFilter: "blur(6px)",
-  padding: "6px 14px",
-  borderRadius: "12px",
-  fontFamily: "Inter, sans-serif",
-  fontWeight: "600",
-  fontSize: "14px",
-  color: "#fff",
-  textShadow: "0 0 6px rgba(0,255,180,0.6)",
-  boxShadow: "0 0 8px rgba(0,255,180,0.3)",
-  transition: "all 0.3s ease"
+  display: "flex", alignItems: "center", justifyContent: "center",
+  gap: "6px", marginTop: "8px", fontFamily: "Inter, sans-serif",
+  fontWeight: "600", fontSize: "14px", color: "#fff",
+  textShadow: "0 0 6px rgba(0,255,180,0.6)", position: "fixed",
+  bottom: "90px", left: "50%", transform: "translateX(-50%)",
+  background: "rgba(0,0,0,0.35)", backdropFilter: "blur(6px)",
+  padding: "6px 14px", borderRadius: "12px",
+  boxShadow: "0 0 8px rgba(0,255,180,0.3)", transition: "all 0.3s ease"
 });
-
-const personIcon = document.createElement("span");
-personIcon.textContent = "👥";
-personIcon.style.fontSize = "16px";
-
-const activeCount = document.createElement("span");
-activeCount.textContent = "0";
-activeCount.style.fontWeight = "700";
-activeCount.style.transition = "all 0.25s ease-in-out";
-
-activeContainer.appendChild(personIcon);
-activeContainer.appendChild(activeCount);
 document.body.appendChild(activeContainer);
+const activeCount = document.getElementById("activeCount");
 
-socket.on("active_users", (count) => {
+socket.on("user_count", (count) => {
   activeCount.textContent = count;
   activeCount.style.transform = "scale(1.3)";
   activeContainer.style.boxShadow = "0 0 12px rgba(0,255,180,0.6)";
@@ -285,7 +296,7 @@ socket.on("active_users", (count) => {
   }, 200);
 });
 
-// --- Color palette ---
+// === Color palette ===
 colors.forEach(c => {
   const div = document.createElement("div");
   div.className = "color-option";
@@ -304,8 +315,5 @@ gridBtn.addEventListener("click", () => {
   drawAll();
   gridBtn.classList.toggle("active", showGrid);
 });
-
 window.addEventListener("resize", drawAll);
-
-// --- Initial draw ---
 drawAll();
