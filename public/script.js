@@ -185,7 +185,7 @@ canvas.addEventListener("mousemove", e => {
 });
 canvas.addEventListener("wheel", e => {
   e.preventDefault();
-  const zoom = e.deltaY < 0 ? 1.05 : 0.95;
+  const zoom = e.deltaY < 0 ? 1.1 : 0.9;
   const newScale = Math.max(1, Math.min(scale * zoom, 40));
   const rect = canvas.getBoundingClientRect();
   const mouseX = e.clientX - rect.left;
@@ -196,14 +196,14 @@ canvas.addEventListener("wheel", e => {
   drawAll();
 });
 
-// === Mobile Touch Controls (smooth zoom + no accidental draw) ===
+// === Mobile Touch Controls (Smooth Pinch Zoom + Safe Tap) ===
 let lastTouchDistance = 0, lastTouchCenter = null;
 let isTouchPanning = false, isPinching = false;
 let lastTouchX = 0, lastTouchY = 0, lastTapTime = 0;
 
 canvas.addEventListener("touchstart", (e) => {
   const now = Date.now();
-  if (now - lastTapTime < 300) return; // prevent double-tap
+  if (now - lastTapTime < 250) return; // prevent double-tap
   lastTapTime = now;
 
   if (e.touches.length === 2) {
@@ -225,14 +225,22 @@ canvas.addEventListener("touchmove", (e) => {
   if (e.touches.length === 2) {
     e.preventDefault();
     isPinching = true;
+
     const newDistance = getTouchDistance(e.touches);
     const center = getTouchCenter(e.touches);
     const zoom = newDistance / lastTouchDistance;
     const newScale = Math.max(1, Math.min(scale * zoom, 40));
-    const smooth = 0.2;
-    cameraX -= (newScale - scale) * (center.x - cameraX) / scale * smooth;
-    cameraY -= (newScale - scale) * (center.y - cameraY) / scale * smooth;
-    scale = newScale;
+
+    // Smooth zoom (lerp)
+    const smoothScale = scale + (newScale - scale) * 0.25;
+
+    const rect = canvas.getBoundingClientRect();
+    const centerX = center.x - rect.left;
+    const centerY = center.y - rect.top;
+    cameraX -= (smoothScale - scale) * (centerX - cameraX) / scale;
+    cameraY -= (smoothScale - scale) * (centerY - cameraY) / scale;
+
+    scale = smoothScale;
     lastTouchDistance = newDistance;
     drawAll();
     return;
@@ -313,14 +321,12 @@ Object.assign(activeContainer.style, {
 document.body.appendChild(activeContainer);
 const activeCount = document.getElementById("activeCount");
 
-socket.on("active_users", (count) => {
+socket.on("connect", () => socket.emit("whoami"));
+socket.on("user_count", (count) => {
   activeCount.textContent = count;
   activeCount.style.transform = "scale(1.3)";
   setTimeout(() => activeCount.style.transform = "scale(1)", 200);
 });
-
-// Request active user count periodically
-setInterval(() => socket.emit("get_active_users"), 3000);
 
 // === Color Palette ===
 colors.forEach(c => {
