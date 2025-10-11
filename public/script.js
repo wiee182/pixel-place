@@ -55,7 +55,7 @@ if (currentUser) {
   });
 }
 
-// --- Socket.IO setup (works with Railway) ---
+// --- Socket.IO setup ---
 const socket = io(window.location.origin, {
   transports: ["websocket", "polling"],
 });
@@ -81,15 +81,14 @@ socket.on("login_failed", (msg) => {
 // --- Receive initial pixels ---
 socket.on("init", (serverPixels) => {
   pixels.clear();
-  // serverPixels is an object (not array)
   Object.entries(serverPixels).forEach(([key, color]) => {
     pixels.set(key, color);
   });
   drawAll();
 });
 
-// --- Receive new pixel updates ---
-socket.on("pixel", ({ x, y, color }) => {
+// --- Receive pixel updates ---
+socket.on("updatePixel", ({ x, y, color }) => {
   pixels.set(`${x},${y}`, color);
   drawAll();
 });
@@ -146,7 +145,7 @@ function drawPixel(e) {
     showLoginPopup();
     return;
   }
-  if (isOnCooldown) return;
+  if (isOnCooldown || userPoints <= 0) return;
 
   const rect = canvas.getBoundingClientRect();
   const mouseX = e.clientX - rect.left;
@@ -155,11 +154,20 @@ function drawPixel(e) {
   const y = Math.floor((mouseY - cameraY) / scale);
   if (x < 0 || y < 0 || x >= canvasSize || y >= canvasSize) return;
 
-  socket.emit("place_pixel", { x, y, color: currentColor });
+  socket.emit("drawPixel", { x, y, color: currentColor });
+
+  // Decrease user points
+  userPoints--;
+  pointsDisplay.textContent = userPoints;
+
+  // Start cooldown if points hit 0
+  if (userPoints <= 0) {
+    startCooldown(20);
+  }
 }
 
 // --- Cooldown system ---
-function startCooldown(wait = 2) {
+function startCooldown(wait = 20) {
   if (isOnCooldown) return;
   isOnCooldown = true;
   cooldownOverlay.style.display = "flex";
@@ -172,6 +180,8 @@ function startCooldown(wait = 2) {
       clearInterval(interval);
       isOnCooldown = false;
       cooldownOverlay.style.display = "none";
+      userPoints = 10;
+      pointsDisplay.textContent = userPoints;
     }
   }, 1000);
 }
@@ -180,10 +190,9 @@ function startCooldown(wait = 2) {
 canvas.addEventListener("mousedown", e => {
   if (e.button === 0) {
     isDrawing = true;
-    isDragging = false; // disable dragging when drawing
+    isDragging = false;
     drawPixel(e);
   } else if (e.button === 1 || e.button === 2) {
-    // middle or right click drag
     isDragging = true;
     isDrawing = false;
   }
