@@ -201,6 +201,7 @@ let touchStartDist = 0, touchStartCenter = null;
 let lastScale = scale;
 let touchPanX = 0, touchPanY = 0;
 let isPinchZooming = false, isPanning = false;
+let lastTouchTime = 0; // ✅ prevent double tap draw
 
 canvas.addEventListener("touchstart", (e) => {
   if (e.touches.length === 2) {
@@ -243,8 +244,16 @@ canvas.addEventListener("touchmove", (e) => {
   }
 }, { passive: false });
 
+// ✅ Fixed double-tap drain issue here
 canvas.addEventListener("touchend", (e) => {
   if (e.touches.length === 0) {
+    const now = Date.now();
+    if (now - lastTouchTime < 250) {
+      lastTouchTime = now;
+      return;
+    }
+    lastTouchTime = now;
+
     if (!isPanning && !isPinchZooming && e.changedTouches.length === 1) {
       const touch = e.changedTouches[0];
       drawPixel({ clientX: touch.clientX, clientY: touch.clientY });
