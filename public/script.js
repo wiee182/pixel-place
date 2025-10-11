@@ -23,7 +23,6 @@ const colors = [
 
 let currentColor = "#000";
 let scale = 20;
-let targetScale = scale;
 let showGrid = true;
 let cameraX = 0;
 let cameraY = 0;
@@ -33,7 +32,6 @@ let lastMouseX, lastMouseY;
 let lastClickTime = 0;
 let userPoints = 10;
 let isOnCooldown = false;
-let zoomAnimating = false;
 
 pointsDisplay.textContent = userPoints;
 cooldownOverlay.style.display = "none";
@@ -185,48 +183,27 @@ canvas.addEventListener("mousemove", e => {
     drawAll();
   }
 });
-
-// === Smooth Zoom (fixed jitter & accidental draw) ===
-canvas.addEventListener("wheel", (e) => {
+canvas.addEventListener("wheel", e => {
   e.preventDefault();
-  const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-  targetScale = Math.max(1, Math.min(targetScale * zoomFactor, 40));
-
+  const zoom = e.deltaY < 0 ? 1.05 : 0.95;
+  const newScale = Math.max(1, Math.min(scale * zoom, 40));
   const rect = canvas.getBoundingClientRect();
   const mouseX = e.clientX - rect.left;
   const mouseY = e.clientY - rect.top;
-
-  const targetCameraX = cameraX - (targetScale - scale) * (mouseX - cameraX) / scale;
-  const targetCameraY = cameraY - (targetScale - scale) * (mouseY - cameraY) / scale;
-
-  if (!zoomAnimating) {
-    zoomAnimating = true;
-    const animateZoom = () => {
-      const diff = targetScale - scale;
-      scale += diff * 0.2;
-      cameraX += (targetCameraX - cameraX) * 0.2;
-      cameraY += (targetCameraY - cameraY) * 0.2;
-      drawAll();
-
-      if (Math.abs(diff) > 0.01) {
-        requestAnimationFrame(animateZoom);
-      } else {
-        scale = targetScale;
-        zoomAnimating = false;
-      }
-    };
-    animateZoom();
-  }
+  cameraX -= (newScale - scale) * (mouseX - cameraX) / scale;
+  cameraY -= (newScale - scale) * (mouseY - cameraY) / scale;
+  scale = newScale;
+  drawAll();
 });
 
-// === Mobile Touch Controls (Smooth Pinch Zoom + Safe Tap) ===
+// === Mobile Touch Controls (smooth zoom + no accidental draw) ===
 let lastTouchDistance = 0, lastTouchCenter = null;
 let isTouchPanning = false, isPinching = false;
 let lastTouchX = 0, lastTouchY = 0, lastTapTime = 0;
 
 canvas.addEventListener("touchstart", (e) => {
   const now = Date.now();
-  if (now - lastTapTime < 250) return;
+  if (now - lastTapTime < 300) return; // prevent double-tap
   lastTapTime = now;
 
   if (e.touches.length === 2) {
@@ -248,20 +225,14 @@ canvas.addEventListener("touchmove", (e) => {
   if (e.touches.length === 2) {
     e.preventDefault();
     isPinching = true;
-
     const newDistance = getTouchDistance(e.touches);
     const center = getTouchCenter(e.touches);
     const zoom = newDistance / lastTouchDistance;
     const newScale = Math.max(1, Math.min(scale * zoom, 40));
-
-    const smoothScale = scale + (newScale - scale) * 0.25;
-    const rect = canvas.getBoundingClientRect();
-    const centerX = center.x - rect.left;
-    const centerY = center.y - rect.top;
-    cameraX -= (smoothScale - scale) * (centerX - cameraX) / scale;
-    cameraY -= (smoothScale - scale) * (centerY - cameraY) / scale;
-
-    scale = smoothScale;
+    const smooth = 0.2;
+    cameraX -= (newScale - scale) * (center.x - cameraX) / scale * smooth;
+    cameraY -= (newScale - scale) * (center.y - cameraY) / scale * smooth;
+    scale = newScale;
     lastTouchDistance = newDistance;
     drawAll();
     return;
@@ -342,12 +313,14 @@ Object.assign(activeContainer.style, {
 document.body.appendChild(activeContainer);
 const activeCount = document.getElementById("activeCount");
 
-socket.on("connect", () => socket.emit("whoami"));
-socket.on("user_count", (count) => {
+socket.on("active_users", (count) => {
   activeCount.textContent = count;
   activeCount.style.transform = "scale(1.3)";
   setTimeout(() => activeCount.style.transform = "scale(1)", 200);
 });
+
+// Request active user count periodically
+setInterval(() => socket.emit("get_active_users"), 3000);
 
 // === Color Palette ===
 colors.forEach(c => {
