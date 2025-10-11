@@ -43,7 +43,7 @@ cameraX = (canvas.width - canvasSize * scale) / 2;
 cameraY = (canvas.height - canvasSize * scale) / 2;
 document.addEventListener("contextmenu", e => e.preventDefault());
 
-// --- Login button behavior ---
+// --- Login button ---
 if (currentUser) {
   loginBtn.textContent = currentUser;
   loginBtn.disabled = true;
@@ -138,7 +138,10 @@ function drawGrid() {
 
 // --- Place pixel ---
 function drawPixel(e) {
-  if (!currentUser) return; // no popup, user must click Login manually
+  if (!currentUser) {
+    window.location.href = "/login.html";
+    return;
+  }
   if (isOnCooldown || userPoints <= 0) return;
 
   const rect = canvas.getBoundingClientRect();
@@ -150,12 +153,12 @@ function drawPixel(e) {
 
   socket.emit("drawPixel", { x, y, color: currentColor });
 
-  // Decrease user points
   userPoints--;
   pointsDisplay.textContent = userPoints;
 
-  // Start cooldown if points hit 0
-  if (userPoints <= 0) startCooldown(20);
+  if (userPoints <= 0) {
+    startCooldown(20);
+  }
 }
 
 // --- Cooldown system ---
@@ -239,6 +242,55 @@ function drawMiniMap() {
     miniCtx.fillRect(x * factor, y * factor, factor, factor);
   }
 }
+
+// --- Active user counter ---
+const activeContainer = document.createElement("div");
+activeContainer.id = "active-users";
+activeContainer.style.display = "flex";
+activeContainer.style.alignItems = "center";
+activeContainer.style.justifyContent = "center";
+activeContainer.style.gap = "6px";
+activeContainer.style.marginTop = "8px";
+activeContainer.style.fontFamily = "Inter, sans-serif";
+activeContainer.style.fontWeight = "600";
+activeContainer.style.fontSize = "14px";
+activeContainer.style.color = "#fff";
+activeContainer.style.textShadow = "0 0 6px rgba(0, 255, 180, 0.6)";
+activeContainer.style.position = "fixed";
+activeContainer.style.bottom = "90px";
+activeContainer.style.left = "50%";
+activeContainer.style.transform = "translateX(-50%)";
+activeContainer.style.background = "rgba(0, 0, 0, 0.35)";
+activeContainer.style.backdropFilter = "blur(6px)";
+activeContainer.style.padding = "6px 14px";
+activeContainer.style.borderRadius = "12px";
+activeContainer.style.boxShadow = "0 0 8px rgba(0, 255, 180, 0.3)";
+activeContainer.style.transition = "all 0.3s ease";
+
+const personIcon = document.createElement("span");
+personIcon.textContent = "👥";
+personIcon.style.fontSize = "16px";
+personIcon.style.opacity = "0.9";
+
+const activeCount = document.createElement("span");
+activeCount.textContent = "0";
+activeCount.style.fontWeight = "700";
+activeCount.style.textShadow = "0 0 10px rgba(0, 255, 180, 0.8)";
+activeCount.style.transition = "all 0.25s ease-in-out";
+
+activeContainer.appendChild(personIcon);
+activeContainer.appendChild(activeCount);
+document.body.appendChild(activeContainer);
+
+socket.on("active_users", (count) => {
+  activeCount.textContent = count;
+  activeCount.style.transform = "scale(1.3)";
+  activeContainer.style.boxShadow = "0 0 12px rgba(0, 255, 180, 0.6)";
+  setTimeout(() => {
+    activeCount.style.transform = "scale(1)";
+    activeContainer.style.boxShadow = "0 0 8px rgba(0, 255, 180, 0.3)";
+  }, 200);
+});
 
 // --- Color palette ---
 colors.forEach(c => {
