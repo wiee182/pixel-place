@@ -270,30 +270,43 @@ gridBtn.addEventListener("click", () => {
 
 window.addEventListener("resize", drawAll);
 
-// --- Login popup ---
+// --- Login popup (modern animated with bounce) ---
 const loginPopup = document.createElement("div");
 loginPopup.id = "login-popup";
 loginPopup.textContent = "LOGIN DULU";
 loginPopup.style.cssText = `
   position: fixed;
-  top: 50%;
+  bottom: -100px;
   left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0,0,0,0.8);
-  color: white;
-  padding: 20px 40px;
-  border-radius: 10px;
-  font-weight: bold;
-  font-size: 24px;
-  z-index: 100;
-  display: none;
+  transform: translateX(-50%) scale(1);
+  background: #1e90ff;
+  color: #fff;
+  padding: 14px 36px;
+  border-radius: 40px;
+  font-weight: 600;
+  font-size: 18px;
+  z-index: 1000;
+  opacity: 0;
+  box-shadow: 0 0 20px rgba(30, 144, 255, 0.6);
+  transition: all 0.6s cubic-bezier(0.25, 1.25, 0.5, 1.05);
   cursor: pointer;
+  user-select: none;
+  pointer-events: auto;
 `;
 document.body.appendChild(loginPopup);
 
 function showLoginPopup() {
-  loginPopup.style.display = "flex";
-  setTimeout(() => (loginPopup.style.display = "none"), 2000);
+  loginPopup.style.bottom = "40px";
+  loginPopup.style.opacity = "1";
+  loginPopup.style.transform = "translateX(-50%) scale(1.1)";
+  setTimeout(() => {
+    loginPopup.style.transform = "translateX(-50%) scale(1)";
+  }, 300);
+
+  setTimeout(() => {
+    loginPopup.style.bottom = "-100px";
+    loginPopup.style.opacity = "0";
+  }, 2200);
 }
 
 loginPopup.addEventListener("click", () => {
