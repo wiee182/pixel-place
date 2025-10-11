@@ -3,17 +3,130 @@
 <head>
   <meta charset="UTF-8">
   <title>Login</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #0f2027, #203a43, #2c5364);
+      color: white;
+    }
+
+    .login-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(10px);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 0 15px rgba(0,255,180,0.3);
+      width: 90%;
+      max-width: 350px;
+      text-align: center;
+    }
+
+    .login-container h2 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 5px;
+      color: #00ffb4;
+      text-shadow: 0 0 10px rgba(0,255,180,0.5);
+    }
+
+    .login-container p.login-subtitle {
+      font-size: 14px;
+      opacity: 0.8;
+      margin-bottom: 20px;
+    }
+
+    .login-container input {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      font-size: 16px;
+      outline: none;
+      transition: 0.2s;
+    }
+
+    .login-container input:focus {
+      background: rgba(255,255,255,0.2);
+      box-shadow: 0 0 8px rgba(0,255,180,0.4);
+    }
+
+    .login-container button {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(90deg, #00ffb4, #00c8ff);
+      color: #000;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .login-container button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 10px rgba(0,255,180,0.5);
+    }
+
+    #login-msg {
+      margin-top: 10px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    a {
+      color: #00ffb4;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    /* bottom bar same as index.html */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
+      height: 60px;
+      border-top: 1px solid rgba(0,255,180,0.3);
+    }
+
+  </style>
 </head>
 <body>
   <div class="login-container">
-    <h2></h2>
+    <h2>Welcome Back!</h2>
     <p class="login-subtitle"></p>
+
     <input type="text" id="username" placeholder="Username">
     <button id="loginBtn">Login</button>
     <p id="login-msg"></p>
+
     <p style="margin-top: 10px;">No account? <a href="/register.html">Register</a></p>
   </div>
+
+  <div class="bottom-bar"></div>
 
   <script>
     document.getElementById("loginBtn").addEventListener("click", async () => {
