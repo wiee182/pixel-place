@@ -306,12 +306,9 @@ function showLoginPopup() {
   setTimeout(() => {
     loginPopup.style.bottom = "-100px";
     loginPopup.style.opacity = "0";
+    window.location.href = "/login.html"; // redirect AFTER animation
   }, 2200);
 }
-
-loginPopup.addEventListener("click", () => {
-  window.location.href = "/login.html";
-});
 
 // --- Initial draw ---
 drawAll();
