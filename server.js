@@ -6,20 +6,20 @@ const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*", // allow all origins (for Railway or local)
-  },
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// === Load users ===
 const usersFile = path.join(__dirname, "users.json");
 let users = {};
 if (fs.existsSync(usersFile)) {
   users = JSON.parse(fs.readFileSync(usersFile));
+}
+
+// Save users to file
+function saveUsers() {
+  fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 }
 
 // === Register route ===
@@ -32,8 +32,8 @@ app.post("/register", (req, res) => {
   if (users[clean])
     return res.json({ success: false, message: "Username already exists" });
 
-  users[clean] = { username: clean, points: 10 };
-  fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+  users[clean] = { username: clean, points: 10, cooldownEnd: 0 };
+  saveUsers();
   res.json({ success: true, message: "Registration successful" });
 });
 
@@ -55,35 +55,39 @@ const pixels = {}; // { "x,y": color }
 
 // === Socket.IO ===
 io.on("connection", (socket) => {
-  console.log("🟢 User connected:", socket.id);
-  socket.username = null;
-  socket.cooldownActive = false;
+  console.log("🟢", socket.id, "connected");
 
-  // --- Login handshake ---
+  socket.username = null;
+
   socket.on("login", (username) => {
     if (users[username]) {
       socket.username = username;
-      socket.emit("login_success", { username, points: users[username].points });
-      console.log(`✅ ${username} logged in`);
+      const user = users[username];
+
+      // Check if user is still on cooldown
+      const now = Date.now();
+      if (user.cooldownEnd && user.cooldownEnd > now) {
+        const remaining = Math.ceil((user.cooldownEnd - now) / 1000);
+        socket.emit("cooldown_started", { wait: remaining });
+      }
+
+      socket.emit("login_success", { username, points: user.points });
     } else {
       socket.emit("login_failed", "User not registered");
     }
   });
 
-  // --- Send current user info ---
   socket.on("whoami", () => {
     if (socket.username && users[socket.username]) {
-      socket.emit("login_success", {
-        username: socket.username,
-        points: users[socket.username].points,
-      });
+      const user = users[socket.username];
+      socket.emit("login_success", { username: user.username, points: user.points });
     }
   });
 
-  // --- Send current canvas data ---
+  // Send existing pixels
   socket.emit("init", pixels);
 
-  // --- Place pixel ---
+  // --- Handle pixel placement ---
   socket.on("drawPixel", ({ x, y, color }) => {
     const user = users[socket.username];
     if (!socket.username || !user) {
@@ -91,62 +95,58 @@ io.on("connection", (socket) => {
       return;
     }
 
-    // Check cooldown
-    if (socket.cooldownActive) {
-      socket.emit("place_failed", { reason: "cooldown", wait: socket.cooldownRemaining || 20 });
+    const now = Date.now();
+    if (user.cooldownEnd && user.cooldownEnd > now) {
+      const remaining = Math.ceil((user.cooldownEnd - now) / 1000);
+      socket.emit("place_failed", { reason: "cooldown", wait: remaining });
       return;
     }
 
-    // Check available points
     if (user.points <= 0) {
+      // Start cooldown
       startCooldown(socket, user);
       return;
     }
 
-    // Draw pixel
+    // Place pixel
     pixels[`${x},${y}`] = color;
     io.emit("updatePixel", { x, y, color });
 
-    // Decrease user points
+    // Deduct point
     user.points -= 1;
+    saveUsers();
     socket.emit("points_update", user.points);
-    fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 
-    // If points reach zero → start cooldown
+    // If no points left, start cooldown
     if (user.points <= 0) {
       startCooldown(socket, user);
     }
   });
 
   socket.on("disconnect", () => {
-    console.log("🔴 Disconnected:", socket.id);
+    console.log("🔴", socket.id, "disconnected");
   });
 });
 
-// === Helper: Cooldown system ===
+// === Cooldown logic ===
 function startCooldown(socket, user) {
-  if (socket.cooldownActive) return;
+  const cooldownDuration = 20 * 1000; // 20 seconds
+  const now = Date.now();
 
-  socket.cooldownActive = true;
-  socket.cooldownRemaining = 20;
-  socket.emit("cooldown_started", { wait: socket.cooldownRemaining });
+  user.cooldownEnd = now + cooldownDuration;
+  saveUsers();
 
-  const countdown = setInterval(() => {
-    socket.cooldownRemaining -= 1;
+  socket.emit("cooldown_started", { wait: cooldownDuration / 1000 });
 
-    if (socket.cooldownRemaining <= 0) {
-      clearInterval(countdown);
-      socket.cooldownActive = false;
-      user.points = 10; // Reset points after cooldown
-      fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
-      socket.emit("points_update", user.points);
-      socket.emit("login_success", { username: user.username, points: user.points });
-    }
-  }, 1000);
+  setTimeout(() => {
+    user.points = 10;
+    user.cooldownEnd = 0;
+    saveUsers();
+    socket.emit("points_update", user.points);
+    socket.emit("login_success", { username: user.username, points: user.points });
+  }, cooldownDuration);
 }
 
 // === Start server ===
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () =>
-  console.log(`✅ Server running at http://localhost:${PORT}`)
-);
+server.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
