@@ -157,8 +157,17 @@ function startCooldown(wait = 20) {
   }, 1000);
 }
 
+// --- Prevent double draw from both touch + mouse ---
+let lastInputWasTouch = false;
+canvas.addEventListener("touchstart", () => {
+  lastInputWasTouch = true;
+  clearTimeout(window.touchFlagReset);
+  window.touchFlagReset = setTimeout(() => { lastInputWasTouch = false; }, 500);
+}, { passive: true });
+
 // === Mouse Controls ===
 canvas.addEventListener("mousedown", e => {
+  if (lastInputWasTouch) return; // ✅ skip mouse event after touch
   const now = Date.now();
   if (now - lastClickTime < 200) return;
   lastClickTime = now;
@@ -196,25 +205,11 @@ canvas.addEventListener("wheel", e => {
   drawAll();
 });
 
-// === Mobile Touch Controls (smooth & accurate) ===
+// === Mobile Touch Controls ===
 let touchStartDist = 0, touchStartCenter = null;
 let lastScale = scale;
 let touchPanX = 0, touchPanY = 0;
 let isPinchZooming = false, isPanning = false;
-let lastTouchTime = 0; // ✅ prevent double tap draw
-
-canvas.addEventListener("touchstart", (e) => {
-  if (e.touches.length === 2) {
-    isPinchZooming = true;
-    touchStartDist = getTouchDistance(e.touches);
-    touchStartCenter = getTouchCenter(e.touches);
-  } else if (e.touches.length === 1) {
-    const touch = e.touches[0];
-    touchPanX = touch.clientX;
-    touchPanY = touch.clientY;
-    isPanning = false;
-  }
-}, { passive: false });
 
 canvas.addEventListener("touchmove", (e) => {
   if (e.touches.length === 2) {
@@ -244,16 +239,8 @@ canvas.addEventListener("touchmove", (e) => {
   }
 }, { passive: false });
 
-// ✅ Fixed double-tap drain issue here
 canvas.addEventListener("touchend", (e) => {
   if (e.touches.length === 0) {
-    const now = Date.now();
-    if (now - lastTouchTime < 250) {
-      lastTouchTime = now;
-      return;
-    }
-    lastTouchTime = now;
-
     if (!isPanning && !isPinchZooming && e.changedTouches.length === 1) {
       const touch = e.changedTouches[0];
       drawPixel({ clientX: touch.clientX, clientY: touch.clientY });
