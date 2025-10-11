@@ -1,79 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>Register</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      background-color: #0b0b0b;
-      color: white;
+    * {
+      box-sizing: border-box;
       font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      margin: 0;
+      background: #111827;
+      color: #fff;
     }
 
     .login-container {
-      background-color: #141414;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #1f2937;
       padding: 28px;
-      border-radius: 16px;
+      border-radius: 14px;
       width: 90%;
-      max-width: 360px;
+      max-width: 340px;
       text-align: center;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      border: 1px solid #374151;
     }
 
-    input {
+    .login-container input {
       width: 100%;
       padding: 12px;
-      margin-bottom: 15px;
       border: none;
       border-radius: 8px;
-      font-size: 16px;
+      margin-bottom: 14px;
+      background: #111827;
+      color: white;
+      font-size: 15px;
       outline: none;
-      background-color: #1f1f1f;
-      color: white;
+      border: 1px solid #374151;
     }
 
-    button {
+    .login-container input:focus {
+      border-color: #00f5a0;
+    }
+
+    .login-container button {
       width: 100%;
       padding: 12px;
+      background: #00f5a0;
+      color: #111;
+      font-weight: 700;
       border: none;
       border-radius: 8px;
-      background-color: #232323;
-      color: white;
-      font-size: 16px;
+      font-size: 15px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: 0.15s;
     }
 
-    button:hover {
-      background-color: #2d2d2d;
-    }
-
-    a {
-      color: #1e90ff;
-      text-decoration: none;
-    }
-
-    a:hover {
-      text-decoration: underline;
+    .login-container button:hover {
+      background: #00e59c;
     }
 
     #reg-msg {
       margin-top: 10px;
       font-size: 14px;
-      min-height: 18px;
+      font-weight: 500;
+    }
+
+    a {
+      color: #00f5a0;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
   <div class="login-container">
-    <input type="text" id="reg-username" placeholder="Username" />
+    <input type="text" id="reg-username" placeholder="Username">
     <button id="register-submit">Register</button>
     <p id="reg-msg"></p>
     <p style="margin-top: 10px;">Already registered? <a href="/login.html">Login</a></p>
@@ -100,8 +114,8 @@
 
       const data = await res.json();
       if (data.success) {
-        regMsg.style.color = "lime";
-        regMsg.textContent = "Registration successful!";
+        regMsg.style.color = "#00f5a0";
+        regMsg.textContent = data.message;
         setTimeout(() => window.location.href = "/login.html", 1000);
       } else {
         regMsg.style.color = "red";
