@@ -95,10 +95,7 @@ socket.on("updatePixel", ({ x, y, color }) => {
 
 // --- Handle placement errors ---
 socket.on("place_failed", ({ reason, wait }) => {
-  if (reason === "not_logged_in") showLoginPopup();
-  if (reason === "cooldown") {
-    startCooldown(wait);
-  }
+  if (reason === "cooldown") startCooldown(wait);
 });
 
 // --- Points update ---
@@ -141,10 +138,7 @@ function drawGrid() {
 
 // --- Place pixel ---
 function drawPixel(e) {
-  if (!currentUser) {
-    showLoginPopup();
-    return;
-  }
+  if (!currentUser) return; // no popup, user must click Login manually
   if (isOnCooldown || userPoints <= 0) return;
 
   const rect = canvas.getBoundingClientRect();
@@ -161,9 +155,7 @@ function drawPixel(e) {
   pointsDisplay.textContent = userPoints;
 
   // Start cooldown if points hit 0
-  if (userPoints <= 0) {
-    startCooldown(20);
-  }
+  if (userPoints <= 0) startCooldown(20);
 }
 
 // --- Cooldown system ---
@@ -269,46 +261,6 @@ gridBtn.addEventListener("click", () => {
 });
 
 window.addEventListener("resize", drawAll);
-
-// --- Login popup (modern animated with bounce) ---
-const loginPopup = document.createElement("div");
-loginPopup.id = "login-popup";
-loginPopup.textContent = "LOGIN DULU";
-loginPopup.style.cssText = `
-  position: fixed;
-  bottom: -100px;
-  left: 50%;
-  transform: translateX(-50%) scale(1);
-  background: #1e90ff;
-  color: #fff;
-  padding: 14px 36px;
-  border-radius: 40px;
-  font-weight: 600;
-  font-size: 18px;
-  z-index: 1000;
-  opacity: 0;
-  box-shadow: 0 0 20px rgba(30, 144, 255, 0.6);
-  transition: all 0.6s cubic-bezier(0.25, 1.25, 0.5, 1.05);
-  cursor: pointer;
-  user-select: none;
-  pointer-events: auto;
-`;
-document.body.appendChild(loginPopup);
-
-function showLoginPopup() {
-  loginPopup.style.bottom = "40px";
-  loginPopup.style.opacity = "1";
-  loginPopup.style.transform = "translateX(-50%) scale(1.1)";
-  setTimeout(() => {
-    loginPopup.style.transform = "translateX(-50%) scale(1)";
-  }, 300);
-
-  setTimeout(() => {
-    loginPopup.style.bottom = "-100px";
-    loginPopup.style.opacity = "0";
-    window.location.href = "/login.html"; // redirect AFTER animation
-  }, 2200);
-}
 
 // --- Initial draw ---
 drawAll();
