@@ -17,7 +17,10 @@ if (fs.existsSync(usersFile)) {
   users = JSON.parse(fs.readFileSync(usersFile));
 }
 
-// Helper: save users
+let pixels = {}; // { "x,y": color }
+let onlineUsers = new Set(); // track currently active usernames
+
+// === Helper: save users ===
 function saveUsers() {
   fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 }
@@ -50,25 +53,29 @@ app.post("/login", (req, res) => {
   res.json({ success: true, username: clean });
 });
 
-// === Canvas pixel data ===
-const pixels = {}; // { "x,y": color }
-
 // === Socket.IO ===
 io.on("connection", (socket) => {
   console.log("🟢", socket.id, "connected");
   socket.username = null;
 
+  // Send current canvas on connect
+  socket.emit("init", pixels);
+
+  // === User login ===
   socket.on("login", (username) => {
     if (users[username]) {
       socket.username = username;
       const user = users[username];
       const now = Date.now();
 
-      // Check cooldown
+      onlineUsers.add(username);
+      io.emit("user_count", onlineUsers.size); // broadcast active users count
+
+      // Resume cooldown if needed
       if (user.cooldownEnd && user.cooldownEnd > now) {
         const remaining = Math.ceil((user.cooldownEnd - now) / 1000);
         socket.emit("cooldown_started", { wait: remaining });
-        startCountdown(socket, user, remaining); // resume countdown
+        startCountdown(socket, user, remaining);
       }
 
       socket.emit("login_success", { username, points: user.points });
@@ -77,6 +84,7 @@ io.on("connection", (socket) => {
     }
   });
 
+  // === Identify ===
   socket.on("whoami", () => {
     if (socket.username && users[socket.username]) {
       const user = users[socket.username];
@@ -84,10 +92,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Send current pixels
-  socket.emit("init", pixels);
-
-  // Handle draw
+  // === Handle drawing ===
   socket.on("drawPixel", ({ x, y, color }) => {
     const user = users[socket.username];
     if (!socket.username || !user) {
@@ -107,24 +112,32 @@ io.on("connection", (socket) => {
       return;
     }
 
-    // Place pixel
+    // Place pixel and broadcast to everyone
     pixels[`${x},${y}`] = color;
     io.emit("updatePixel", { x, y, color });
 
-    // Deduct a point
+    // Deduct one point
     user.points -= 1;
     saveUsers();
     socket.emit("points_update", user.points);
 
+    // If ran out of points, start cooldown
     if (user.points <= 0) startCooldown(socket, user);
   });
 
+  // === Handle disconnect ===
   socket.on("disconnect", () => {
-    console.log("🔴", socket.id, "disconnected");
+    if (socket.username) {
+      onlineUsers.delete(socket.username);
+      io.emit("user_count", onlineUsers.size);
+      console.log(`🔴 ${socket.username} disconnected`);
+    } else {
+      console.log("🔴 Unknown user disconnected");
+    }
   });
 });
 
-// === Cooldown Logic ===
+// === Cooldown system ===
 function startCooldown(socket, user) {
   const duration = 20 * 1000;
   const now = Date.now();
