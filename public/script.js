@@ -218,26 +218,37 @@ canvas.addEventListener("touchmove", (e) => {
     e.preventDefault();
     const newDist = getTouchDistance(e.touches);
     const center = getTouchCenter(e.touches);
-    const zoomFactor = newDist / startDist;
-    const newScale = Math.max(1, Math.min(startScale * zoomFactor, 40));
-    const smooth = 0.25;
-    scale += (newScale - scale) * smooth;
-    cameraX -= (center.x - cameraX) * (newScale / scale - 1);
-    cameraY -= (center.y - cameraY) * (newScale / scale - 1);
+
+    const zoomFactor = newDist / touchStartDist;
+    let newScale = lastScale * zoomFactor;
+    newScale = Math.max(1, Math.min(newScale, 40));
+
+    // Keep zoom centered on pinch midpoint
+    const canvasRect = canvas.getBoundingClientRect();
+    const centerX = center.x - canvasRect.left;
+    const centerY = center.y - canvasRect.top;
+
+    // Calculate how much to shift camera to keep center fixed
+    cameraX = centerX - ((centerX - cameraX) * (newScale / scale));
+    cameraY = centerY - ((centerY - cameraY) * (newScale / scale));
+
+    scale = newScale;
     drawAll();
-  } else if (e.touches.length === 1 && !isZooming) {
+  } else if (e.touches.length === 1 && !isPinchZooming) {
     e.preventDefault();
     const touch = e.touches[0];
-    const dx = touch.clientX - lastTouchX;
-    const dy = touch.clientY - lastTouchY;
-    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
-      isTouchPanning = true;
+    const dx = touch.clientX - touchPanX;
+    const dy = touch.clientY - touchPanY;
+
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      isPanning = true;
       cameraX += dx;
       cameraY += dy;
       drawAll();
     }
-    lastTouchX = touch.clientX;
-    lastTouchY = touch.clientY;
+
+    touchPanX = touch.clientX;
+    touchPanY = touch.clientY;
   }
 }, { passive: false });
 
