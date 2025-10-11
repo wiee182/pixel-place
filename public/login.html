@@ -17,72 +17,68 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at top, #0f2027, #203a43, #2c5364);
-      color: white;
+      background: #111827;
+      color: #fff;
     }
 
     .login-container {
       display: flex;
       flex-direction: column;
       align-items: center;
-      background: rgba(0, 0, 0, 0.4);
-      backdrop-filter: blur(10px);
-      padding: 30px;
-      border-radius: 20px;
-      box-shadow: 0 0 15px rgba(0,255,180,0.3);
+      background: #1f2937;
+      padding: 28px;
+      border-radius: 14px;
       width: 90%;
-      max-width: 350px;
+      max-width: 340px;
       text-align: center;
+      border: 1px solid #374151;
     }
 
     .login-container h2 {
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 700;
-      margin-bottom: 5px;
-      color: #00ffb4;
-      text-shadow: 0 0 10px rgba(0,255,180,0.5);
+      margin-bottom: 6px;
+      color: #00f5a0;
     }
 
     .login-container p.login-subtitle {
       font-size: 14px;
-      opacity: 0.8;
-      margin-bottom: 20px;
+      opacity: 0.7;
+      margin-bottom: 18px;
     }
 
     .login-container input {
       width: 100%;
       padding: 12px;
       border: none;
-      border-radius: 10px;
-      margin-bottom: 15px;
-      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+      margin-bottom: 14px;
+      background: #111827;
       color: white;
-      font-size: 16px;
+      font-size: 15px;
       outline: none;
-      transition: 0.2s;
+      border: 1px solid #374151;
     }
 
     .login-container input:focus {
-      background: rgba(255,255,255,0.2);
-      box-shadow: 0 0 8px rgba(0,255,180,0.4);
+      border-color: #00f5a0;
     }
 
     .login-container button {
       width: 100%;
       padding: 12px;
-      background: linear-gradient(90deg, #00ffb4, #00c8ff);
-      color: #000;
+      background: #00f5a0;
+      color: #111;
       font-weight: 700;
       border: none;
-      border-radius: 10px;
-      font-size: 16px;
+      border-radius: 8px;
+      font-size: 15px;
       cursor: pointer;
-      transition: 0.2s;
+      transition: 0.15s;
     }
 
     .login-container button:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 10px rgba(0,255,180,0.5);
+      background: #00e59c;
     }
 
     #login-msg {
@@ -92,7 +88,7 @@
     }
 
     a {
-      color: #00ffb4;
+      color: #00f5a0;
       text-decoration: none;
       font-weight: 600;
     }
@@ -101,22 +97,20 @@
       text-decoration: underline;
     }
 
-    /* bottom bar same as index.html */
+    /* bottom bar same tone as index.html */
     .bottom-bar {
       position: fixed;
       bottom: 0;
       width: 100%;
-      background: rgba(0,0,0,0.4);
-      backdrop-filter: blur(8px);
+      background: #1f2937;
       height: 60px;
-      border-top: 1px solid rgba(0,255,180,0.3);
+      border-top: 1px solid #374151;
     }
-
   </style>
 </head>
 <body>
   <div class="login-container">
-    <h2>Welcome Back!</h2>
+    <h2></h2>
     <p class="login-subtitle"></p>
 
     <input type="text" id="username" placeholder="Username">
@@ -148,7 +142,7 @@
 
       if (data.success) {
         localStorage.setItem("username", data.username);
-        msg.style.color = "lime";
+        msg.style.color = "#00f5a0";
         msg.textContent = "Let's draw!";
         setTimeout(() => window.location.href = "/", 1000);
       } else {
