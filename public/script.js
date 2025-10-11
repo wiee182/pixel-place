@@ -185,7 +185,7 @@ canvas.addEventListener("mousemove", e => {
 });
 canvas.addEventListener("wheel", e => {
   e.preventDefault();
-  const zoom = e.deltaY < 0 ? 1.1 : 0.9;
+  const zoom = e.deltaY < 0 ? 1.05 : 0.95;
   const newScale = Math.max(1, Math.min(scale * zoom, 40));
   const rect = canvas.getBoundingClientRect();
   const mouseX = e.clientX - rect.left;
@@ -196,14 +196,14 @@ canvas.addEventListener("wheel", e => {
   drawAll();
 });
 
-// === Mobile Touch Controls (no accidental draw) ===
+// === Mobile Touch Controls (smooth zoom + no accidental draw) ===
 let lastTouchDistance = 0, lastTouchCenter = null;
 let isTouchPanning = false, isPinching = false;
 let lastTouchX = 0, lastTouchY = 0, lastTapTime = 0;
 
 canvas.addEventListener("touchstart", (e) => {
   const now = Date.now();
-  if (now - lastTapTime < 250) return; // prevent double-tap
+  if (now - lastTapTime < 300) return; // prevent double-tap
   lastTapTime = now;
 
   if (e.touches.length === 2) {
@@ -229,8 +229,9 @@ canvas.addEventListener("touchmove", (e) => {
     const center = getTouchCenter(e.touches);
     const zoom = newDistance / lastTouchDistance;
     const newScale = Math.max(1, Math.min(scale * zoom, 40));
-    cameraX -= (newScale - scale) * (center.x - cameraX) / scale;
-    cameraY -= (newScale - scale) * (center.y - cameraY) / scale;
+    const smooth = 0.2;
+    cameraX -= (newScale - scale) * (center.x - cameraX) / scale * smooth;
+    cameraY -= (newScale - scale) * (center.y - cameraY) / scale * smooth;
     scale = newScale;
     lastTouchDistance = newDistance;
     drawAll();
@@ -312,12 +313,14 @@ Object.assign(activeContainer.style, {
 document.body.appendChild(activeContainer);
 const activeCount = document.getElementById("activeCount");
 
-socket.on("connect", () => socket.emit("whoami"));
 socket.on("active_users", (count) => {
   activeCount.textContent = count;
   activeCount.style.transform = "scale(1.3)";
   setTimeout(() => activeCount.style.transform = "scale(1)", 200);
 });
+
+// Request active user count periodically
+setInterval(() => socket.emit("get_active_users"), 3000);
 
 // === Color Palette ===
 colors.forEach(c => {
