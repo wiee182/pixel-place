@@ -29,8 +29,7 @@ let cameraY = 0;
 let isDrawing = false;
 let isDragging = false;
 let lastMouseX, lastMouseY;
-let lastClickTime = 0; // Prevent double click spam
-
+let lastClickTime = 0;
 let userPoints = 10;
 let isOnCooldown = false;
 
@@ -56,8 +55,6 @@ if (currentUser) {
 
 // --- Socket.IO setup ---
 const socket = io(window.location.origin, { transports: ["websocket", "polling"] });
-
-// --- Login handshake ---
 if (currentUser) {
   socket.emit("login", currentUser);
   socket.emit("whoami");
@@ -71,25 +68,22 @@ socket.on("login_success", (data) => {
 
 socket.on("login_failed", () => { currentUser = null; });
 
-// --- Receive initial pixels ---
+// --- Receive pixels ---
 socket.on("init", (serverPixels) => {
   pixels.clear();
   Object.entries(serverPixels).forEach(([key, color]) => pixels.set(key, color));
   drawAll();
 });
 
-// --- Receive pixel updates ---
 socket.on("updatePixel", ({ x, y, color }) => {
   pixels.set(`${x},${y}`, color);
   drawAll();
 });
 
-// --- Handle placement errors ---
 socket.on("place_failed", ({ reason, wait }) => {
   if (reason === "cooldown") startCooldown(wait);
 });
 
-// --- Points update ---
 socket.on("points_update", (points) => {
   userPoints = points;
   pointsDisplay.textContent = userPoints;
@@ -127,10 +121,7 @@ function drawGrid() {
 
 // === Pixel placement ===
 function drawPixel(e) {
-  if (!currentUser) {
-    window.location.href = "/login.html";
-    return;
-  }
+  if (!currentUser) return (window.location.href = "/login.html");
   if (isOnCooldown || userPoints <= 0) return;
 
   const rect = canvas.getBoundingClientRect();
@@ -166,19 +157,17 @@ function startCooldown(wait = 20) {
   }, 1000);
 }
 
-// === Desktop Mouse Controls ===
+// === Mouse Controls ===
 canvas.addEventListener("mousedown", e => {
   const now = Date.now();
-  if (now - lastClickTime < 200) return; // prevent double-click spam
+  if (now - lastClickTime < 200) return; // prevent double-click
   lastClickTime = now;
 
   if (e.button === 0) {
     isDrawing = true;
-    isDragging = false;
     drawPixel(e);
   } else if (e.button === 1 || e.button === 2) {
     isDragging = true;
-    isDrawing = false;
   }
   lastMouseX = e.clientX;
   lastMouseY = e.clientY;
@@ -207,18 +196,14 @@ canvas.addEventListener("wheel", e => {
   drawAll();
 });
 
-// === Mobile Touch Controls (Fixed Accidental Draws) ===
-let lastTouchDistance = 0;
-let lastTouchCenter = null;
-let isTouchPanning = false;
-let isPinching = false;
-let lastTouchX = 0;
-let lastTouchY = 0;
-let lastTapTime = 0;
+// === Mobile Touch Controls (no accidental draw) ===
+let lastTouchDistance = 0, lastTouchCenter = null;
+let isTouchPanning = false, isPinching = false;
+let lastTouchX = 0, lastTouchY = 0, lastTapTime = 0;
 
 canvas.addEventListener("touchstart", (e) => {
   const now = Date.now();
-  if (now - lastTapTime < 250) return; // prevent double tap
+  if (now - lastTapTime < 250) return; // prevent double-tap
   lastTapTime = now;
 
   if (e.touches.length === 2) {
@@ -308,12 +293,12 @@ function drawMiniMap() {
   }
 }
 
-// === Active user counter (fixed persistent) ===
+// === Active User Counter ===
 const activeContainer = document.createElement("div");
 activeContainer.id = "active-users";
 activeContainer.innerHTML = `
   <span style="font-size:16px;opacity:0.9">👥</span>
-  <span id="activeCount" style="font-weight:700;text-shadow:0 0 10px rgba(0,255,180,0.8);transition:all 0.25s ease-in-out">0</span>`;
+  <span id="activeCount" style="font-weight:700;text-shadow:0 0 10px rgba(0,255,180,0.8)">0</span>`;
 Object.assign(activeContainer.style, {
   display: "flex", alignItems: "center", justifyContent: "center",
   gap: "6px", marginTop: "8px", fontFamily: "Inter, sans-serif",
@@ -322,24 +307,19 @@ Object.assign(activeContainer.style, {
   bottom: "90px", left: "50%", transform: "translateX(-50%)",
   background: "rgba(0,0,0,0.35)", backdropFilter: "blur(6px)",
   padding: "6px 14px", borderRadius: "12px",
-  boxShadow: "0 0 8px rgba(0,255,180,0.3)", transition: "all 0.3s ease"
+  boxShadow: "0 0 8px rgba(0,255,180,0.3)"
 });
 document.body.appendChild(activeContainer);
 const activeCount = document.getElementById("activeCount");
 
-// ensure active user counter updates on every reconnect
 socket.on("connect", () => socket.emit("whoami"));
 socket.on("active_users", (count) => {
   activeCount.textContent = count;
   activeCount.style.transform = "scale(1.3)";
-  activeContainer.style.boxShadow = "0 0 12px rgba(0,255,180,0.6)";
-  setTimeout(() => {
-    activeCount.style.transform = "scale(1)";
-    activeContainer.style.boxShadow = "0 0 8px rgba(0,255,180,0.3)";
-  }, 200);
+  setTimeout(() => activeCount.style.transform = "scale(1)", 200);
 });
 
-// === Color palette ===
+// === Color Palette ===
 colors.forEach(c => {
   const div = document.createElement("div");
   div.className = "color-option";
@@ -351,7 +331,6 @@ colors.forEach(c => {
   });
   colorPopup.appendChild(div);
 });
-
 moreColorsBtn.addEventListener("click", () => colorPopup.classList.toggle("hidden"));
 gridBtn.addEventListener("click", () => {
   showGrid = !showGrid;
