@@ -34,19 +34,6 @@
       border: 1px solid #374151;
     }
 
-    .login-container h2 {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 6px;
-      color: #00f5a0;
-    }
-
-    .login-container p.login-subtitle {
-      font-size: 14px;
-      opacity: 0.7;
-      margin-bottom: 18px;
-    }
-
     .login-container input {
       width: 100%;
       padding: 12px;
@@ -96,31 +83,15 @@
     a:hover {
       text-decoration: underline;
     }
-
-    /* bottom bar same tone as index.html */
-    .bottom-bar {
-      position: fixed;
-      bottom: 0;
-      width: 100%;
-      background: #1f2937;
-      height: 60px;
-      border-top: 1px solid #374151;
-    }
   </style>
 </head>
 <body>
   <div class="login-container">
-    <h2></h2>
-    <p class="login-subtitle"></p>
-
     <input type="text" id="username" placeholder="Username">
     <button id="loginBtn">Login</button>
     <p id="login-msg"></p>
-
     <p style="margin-top: 10px;">No account? <a href="/register.html">Register</a></p>
   </div>
-
-  <div class="bottom-bar"></div>
 
   <script>
     document.getElementById("loginBtn").addEventListener("click", async () => {
